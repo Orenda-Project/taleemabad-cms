@@ -95,20 +95,22 @@ export default function CourseTable() {
                   <td className="px-4 py-2">{course.type}</td>
                   <td className="px-4 py-2">{course.level}</td>
                   <td className="px-4 py-2">{course.trainings_count}</td>
-                  <td className="px-4 py-2 flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => goToTrainings(course)}>
-                      Trainings →
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingCourse(course)}>
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDuplicateCourse(course)}>
-                      Duplicate
-                    </Button>
+                  <td className="px-4 py-2">
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => goToTrainings(course)}>
+                        Trainings →
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingCourse(course)}>
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setDuplicateCourse(course)}>
+                        Duplicate
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
-              {!isLoading && filtered.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-slate-400">No courses found.</td>
                 </tr>

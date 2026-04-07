@@ -60,11 +60,16 @@ export default function CourseForm({ course, onSuccess }: Props) {
       time_duration: Number(values.time_duration) || 1,
       description: values.description || null,
       thumbnail_url: values.thumbnail_url || null,
-      is_active: "True",
+      is_active: true,
+    }
+
+    if (Number(values.level) === 0) {
+      toast({ title: "Please select a level", variant: "destructive" })
+      return
     }
 
     try {
-      if (course) {
+      if (course && course.id > 0) {
         await updateCourse.mutateAsync({ id: course.id, data: payload })
         toast({ title: "Course updated" })
       } else {
