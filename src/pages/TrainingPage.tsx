@@ -3,6 +3,7 @@ import CourseTable from "../components/training/CourseTable"
 import TrainingTable from "../components/training/TrainingTable"
 import QuestionTable from "../components/training/QuestionTable"
 import GrandQuizTable from "../components/training/GrandQuizTable"
+import ReviewUpload from "../components/training/ReviewUpload"
 
 function QuestionsRoute() {
   const [params] = useSearchParams()
@@ -17,7 +18,7 @@ export default function TrainingPage() {
       <Route path="trainings" element={<TrainingTable />} />
       <Route path="questions" element={<QuestionsRoute />} />
       <Route path="grand-quiz" element={<GrandQuizTable />} />
-      <Route path="review" element={<div>Review/Upload — Task 10</div>} />
+      <Route path="review" element={<ReviewUpload />} />
     </Routes>
   )
 }
