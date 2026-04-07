@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useQuestions, useCreateQuestions } from "../../hooks/useQuestions"
+import { useQuestions, useGrandQuizQuestions, useCreateQuestions } from "../../hooks/useQuestions"
 import { useTrainingStore } from "../../store/trainingStore"
 import { useUpdateCourse } from "../../hooks/useCourses"
 import { Badge } from "../ui/badge"
@@ -13,8 +13,10 @@ interface Props {
 }
 
 export default function QuestionTable({ grandQuizMode }: Props) {
-  const { trainingCtx, courseCtx, stagedQuestions, stagedGrandQuizQuestions, clearStagedQuestions, clearStagedGrandQuizQuestions } = useTrainingStore()
-  const { data: existingQuestions = [], isLoading, refetch } = useQuestions(grandQuizMode ? undefined : trainingCtx?.uuid)
+  const { trainingCtx, grandQuizCtx, courseCtx, stagedQuestions, stagedGrandQuizQuestions, clearStagedQuestions, clearStagedGrandQuizQuestions } = useTrainingStore()
+  const questionsResult = useQuestions(grandQuizMode ? undefined : trainingCtx?.uuid)
+  const grandQuizQuestionsResult = useGrandQuizQuestions(grandQuizMode ? grandQuizCtx?.id : undefined)
+  const { data: existingQuestions = [], isLoading, refetch } = grandQuizMode ? grandQuizQuestionsResult : questionsResult
   const createQuestions = useCreateQuestions()
   const updateCourse = useUpdateCourse()
   const { toast } = useToast()
@@ -73,6 +75,10 @@ export default function QuestionTable({ grandQuizMode }: Props) {
         await updateCourse.mutateAsync({ id: courseCtx.id, data: { is_active: true, status: "ReadyForReview" } })
       }
 
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
       let attempts = 0
       pollRef.current = setInterval(async () => {
         await refetch()
@@ -127,9 +133,7 @@ export default function QuestionTable({ grandQuizMode }: Props) {
                   </td>
                   <td className="px-4 py-2">{q.type}</td>
                   <td className="px-4 py-2">
-                    <div className="flex gap-1">
-                      <Badge className={cn("text-xs", statusColor(q.status))}>{q.status}</Badge>
-                    </div>
+                    <Badge className={cn("text-xs", statusColor(q.status))}>{q.status}</Badge>
                   </td>
                 </tr>
               ))}

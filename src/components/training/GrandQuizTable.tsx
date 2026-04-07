@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useGrandQuizzes } from "../../hooks/useGrandQuizzes"
 import { useLevels } from "../../hooks/useLevels"
@@ -12,6 +12,12 @@ import type { GrandQuiz } from "../../types"
 export default function GrandQuizTable() {
   const { data: levels = [] } = useLevels()
   const [selectedLevel, setSelectedLevel] = useState<number | undefined>(undefined)
+  useEffect(() => {
+    if (!selectedLevel && levels.length > 0) {
+      setSelectedLevel(levels[0].id)
+    }
+  }, [levels, selectedLevel])
+
   const { data: quizzes = [], isLoading } = useGrandQuizzes(selectedLevel ?? levels[0]?.id)
   const { setGrandQuizCtx } = useTrainingStore()
   const navigate = useNavigate()
