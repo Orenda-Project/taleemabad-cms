@@ -60,7 +60,6 @@ export default function CourseForm({ course, onSuccess }: Props) {
       time_duration: Number(values.time_duration) || 1,
       description: values.description || null,
       thumbnail_url: values.thumbnail_url || null,
-      status: "ReadyForReview",
       is_active: "True",
     }
 
@@ -69,7 +68,7 @@ export default function CourseForm({ course, onSuccess }: Props) {
         await updateCourse.mutateAsync({ id: course.id, data: payload })
         toast({ title: "Course updated" })
       } else {
-        await createCourse.mutateAsync(payload)
+        await createCourse.mutateAsync({ ...payload, status: "ReadyForReview" })
         toast({ title: "Course created" })
         reset()
         setOpen(false)

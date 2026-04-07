@@ -76,6 +76,8 @@ export default function CourseTable() {
                 <th className="px-4 py-2 text-left">#</th>
                 <th className="px-4 py-2 text-left">Title</th>
                 <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Type</th>
+                <th className="px-4 py-2 text-left">Level</th>
                 <th className="px-4 py-2 text-left">Trainings</th>
                 <th className="px-4 py-2 text-left">Actions</th>
               </tr>
@@ -90,6 +92,8 @@ export default function CourseTable() {
                       {course.status}
                     </Badge>
                   </td>
+                  <td className="px-4 py-2">{course.type}</td>
+                  <td className="px-4 py-2">{course.level}</td>
                   <td className="px-4 py-2">{course.trainings_count}</td>
                   <td className="px-4 py-2 flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => goToTrainings(course)}>
@@ -106,7 +110,7 @@ export default function CourseTable() {
               ))}
               {!isLoading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-400">No courses found.</td>
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">No courses found.</td>
                 </tr>
               )}
             </tbody>
