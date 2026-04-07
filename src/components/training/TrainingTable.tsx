@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTrainings, useCreateTrainings } from "../../hooks/useTrainings"
 import { useTrainingStore } from "../../store/trainingStore"
@@ -18,6 +18,13 @@ export default function TrainingTable() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
 
   const allRows: Training[] = [
     ...existingTrainings.map(t => ({ ...t, _local_status: "existing" as const })),
@@ -66,10 +73,13 @@ export default function TrainingTable() {
 
       // Poll for backend consistency
       let attempts = 0
-      const poll = setInterval(async () => {
+      pollRef.current = setInterval(async () => {
         await refetch()
         attempts++
-        if (attempts >= 12) clearInterval(poll) // 12 * 5s = 60s
+        if (attempts >= 12) {
+          clearInterval(pollRef.current!)
+          pollRef.current = null
+        }
       }, 5000)
     } catch (err: any) {
       toast({ title: "Push failed", description: err.response?.data?.message, variant: "destructive" })
