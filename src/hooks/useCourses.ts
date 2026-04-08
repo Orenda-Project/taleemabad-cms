@@ -8,8 +8,11 @@ export const useCourses = (params?: { type?: string; level?: number }) =>
     enabled: true,
   })
 
-export const useCoursesForReview = () =>
-  useQuery({ queryKey: ["courses", "review"], queryFn: getCoursesForReview })
+export const useCoursesForReview = (params?: { level?: number; vendor?: string }) =>
+  useQuery({
+    queryKey: ["courses", "review", params?.level, params?.vendor],
+    queryFn: () => getCoursesForReview(params),
+  })
 
 export const useCreateCourse = () => {
   const qc = useQueryClient()

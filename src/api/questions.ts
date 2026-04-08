@@ -12,6 +12,13 @@ export const getBulkQuestions = (trainingIds: number[], grandQuizIds: number[]) 
     `/api/v1/training_questions/?is_active=null&training_ids=${trainingIds.join(",")}&grand_quiz_ids=${grandQuizIds.join(",")}`
   ).then(r => r.data)
 
+export const getBulkGrandQuizQuestions = (grandQuizIds: number[]) =>
+  grandQuizIds.length === 0
+    ? Promise.resolve([] as Question[])
+    : apiClient.get<Question[]>(
+        `/api/v1/training_questions/?is_active=null&grand_quiz_ids=${grandQuizIds.join(",")}`
+      ).then(r => r.data)
+
 export const createQuestions = (data: Record<string, unknown>[]) =>
   apiClient.post<Question[]>("/api/v1/internal/training_question/", data).then(r => r.data)
 

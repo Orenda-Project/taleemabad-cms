@@ -20,7 +20,7 @@ interface FormValues {
   option1: string; option2: string; option3: string; option4: string
   option5: string; option6: string
   answer1: string; answer2: string; answer3: string; answer4: string
-  hint1: string; hint2: string
+  hint1: string; hint2: string; hint3: string; hint4: string; hint5: string; hint6: string
   media_asset_id: string
 }
 
@@ -57,6 +57,10 @@ export default function QuestionForm({ grandQuizMode, question, onSuccess }: Pro
           answer4: String(question.answers?.[3] ?? ""),
           hint1: question.hints?.[0] ?? "",
           hint2: question.hints?.[1] ?? "",
+          hint3: question.hints?.[2] ?? "",
+          hint4: question.hints?.[3] ?? "",
+          hint5: question.hints?.[4] ?? "",
+          hint6: question.hints?.[5] ?? "",
           media_asset_id: question.statement_media_asset_id ? String(question.statement_media_asset_id) : "",
         }
       : { type: "mcq", bloom_level: "remember" }
@@ -79,7 +83,8 @@ export default function QuestionForm({ grandQuizMode, question, onSuccess }: Pro
     const answers = isMulti
       ? [values.answer1, values.answer2, values.answer3, values.answer4].filter(Boolean).map(Number)
       : values.answer1 ? [Number(values.answer1)] : []
-    const hints = [values.hint1, values.hint2].filter(Boolean)
+    const allHints = [values.hint1, values.hint2, values.hint3, values.hint4, values.hint5, values.hint6]
+    const hints = allHints.slice(0, options.length).map(h => h ?? "")
 
     const payload = {
       type: normalizedType,
@@ -160,12 +165,30 @@ export default function QuestionForm({ grandQuizMode, question, onSuccess }: Pro
         )}
         {showOptions && (
           <>
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i}>
-                <Label>Option {i}</Label>
-                <Input {...register(`option${i}` as keyof FormValues)} />
+            <div className="col-span-2">
+              <div className="grid grid-cols-[auto_1fr_1fr] gap-x-3 gap-y-1 mb-1">
+                <div />
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Option</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Hint</span>
               </div>
-            ))}
+              <div className="space-y-2">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className="grid grid-cols-[28px_1fr_1fr] items-center gap-x-3">
+                    <span className="text-xs font-semibold text-slate-400 text-center leading-none pt-2">{i}</span>
+                    <Input
+                      {...register(`option${i}` as keyof FormValues)}
+                      placeholder={`Option ${i}`}
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      {...register(`hint${i}` as keyof FormValues)}
+                      placeholder={`Hint for option ${i}`}
+                      className="h-8 text-sm text-slate-500"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
             {isMulti ? (
               [1,2,3,4].map(i => (
                 <div key={i}>
@@ -181,14 +204,12 @@ export default function QuestionForm({ grandQuizMode, question, onSuccess }: Pro
             )}
           </>
         )}
-        <div>
-          <Label>Hint 1</Label>
-          <Input {...register("hint1")} />
-        </div>
-        <div>
-          <Label>Hint 2</Label>
-          <Input {...register("hint2")} />
-        </div>
+        {!showOptions && (
+          <div>
+            <Label>Hint</Label>
+            <Input {...register("hint1")} />
+          </div>
+        )}
       </div>
       <Button type="submit" disabled={createQuestions.isPending || updateQuestion.isPending}>
         {question ? "Update" : "Save Question"}
