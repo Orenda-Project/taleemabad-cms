@@ -1,8 +1,12 @@
 import { apiClient } from "./client"
 import type { Course } from "../types"
 
-export const getCourses = (type?: string) =>
-  apiClient.get<Course[]>(`/api/v1/courses/?is_active=true${type ? `&type=${type}` : ""}`).then(r => r.data)
+export const getCourses = (params?: { type?: string; level?: number }) => {
+  const qs = new URLSearchParams({ is_active: "true" })
+  if (params?.type) qs.set("type", params.type)
+  if (params?.level) qs.set("level", String(params.level))
+  return apiClient.get<Course[]>(`/api/v1/courses/?${qs}`).then(r => r.data)
+}
 
 export const getCoursesForReview = () =>
   apiClient.get<Course[]>("/api/v1/courses/?is_active=null").then(r => r.data)

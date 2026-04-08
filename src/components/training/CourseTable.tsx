@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useCourses } from "../../hooks/useCourses"
+import { useLevels } from "../../hooks/useLevels"
 import { useTrainingStore } from "../../store/trainingStore"
 import { COURSE_TYPES } from "../../types"
 import type { Course } from "../../types"
@@ -9,16 +10,38 @@ import { Skeleton } from "../ui/skeleton"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Badge } from "../ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import CourseForm from "./CourseForm"
 
+const VENDORS = [
+  { value: "TALEEMABAD", label: "Taleemabad" },
+  { value: "BEACONHOUSE", label: "Beaconhouse" },
+  { value: "NIETE", label: "NIETE" },
+]
+
 export default function CourseTable() {
-  const [selectedType, setSelectedType] = useState(COURSE_TYPES[0].value)
+  const [selectedVendor, setSelectedVendor] = useState<string>("TALEEMABAD")
+  const [selectedLevel, setSelectedLevel] = useState<number | undefined>(undefined)
+  const [selectedType, setSelectedType] = useState("")
   const [search, setSearch] = useState("")
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [duplicateCourse, setDuplicateCourse] = useState<Course | null>(null)
-  const { data: courses = [], isLoading } = useCourses(selectedType)
+
+  const { data: levels = [], isLoading: levelsLoading } = useLevels(selectedVendor)
+  const { data: courses = [], isLoading } = useCourses(
+    selectedLevel ? { type: selectedType || undefined, level: selectedLevel } : undefined
+  )
   const { setCourseCtx } = useTrainingStore()
   const navigate = useNavigate()
+
+  // Auto-select first level when vendor changes or levels load
+  useEffect(() => {
+    if (levels.length > 0) {
+      setSelectedLevel(levels[0].id)
+    } else {
+      setSelectedLevel(undefined)
+    }
+  }, [levels])
 
   const filtered = courses.filter(c =>
     c.title.toLowerCase().includes(search.toLowerCase())
@@ -45,7 +68,52 @@ export default function CourseTable() {
         <CourseForm />
       )}
 
+      {/* Vendor selector */}
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-sm font-medium text-slate-600">Vendor</span>
+        <Select value={selectedVendor} onValueChange={v => { setSelectedVendor(v); setSelectedLevel(undefined) }}>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {VENDORS.map(v => (
+              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Level tabs */}
       <div className="flex gap-2 mb-4 flex-wrap">
+        {levelsLoading ? (
+          <div className="flex gap-2">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-8 w-20" />)}
+          </div>
+        ) : levels.length === 0 ? (
+          <p className="text-sm text-slate-400">No levels for this vendor.</p>
+        ) : (
+          levels.map(l => (
+            <Button
+              key={l.id}
+              size="sm"
+              variant={selectedLevel === l.id ? "default" : "outline"}
+              onClick={() => setSelectedLevel(l.id)}
+            >
+              {l.name}
+            </Button>
+          ))
+        )}
+      </div>
+
+      {/* Course type filter */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <Button
+          size="sm"
+          variant={selectedType === "" ? "default" : "outline"}
+          onClick={() => setSelectedType("")}
+        >
+          All Types
+        </Button>
         {COURSE_TYPES.map(t => (
           <Button
             key={t.value}
@@ -67,7 +135,9 @@ export default function CourseTable() {
         />
       </div>
 
-      {isLoading ? (
+      {!selectedLevel ? (
+        <p className="text-slate-400 text-sm">Select a level above to view courses.</p>
+      ) : isLoading ? (
         <div className="space-y-2">
           {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
         </div>

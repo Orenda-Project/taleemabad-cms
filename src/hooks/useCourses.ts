@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getCourses, getCoursesForReview, createCourse, updateCourse } from "../api/courses"
 
-export const useCourses = (type?: string) =>
+export const useCourses = (params?: { type?: string; level?: number }) =>
   useQuery({
-    queryKey: ["courses", type],
-    queryFn: () => getCourses(type),
+    queryKey: ["courses", params?.type, params?.level],
+    queryFn: () => getCourses(params),
     enabled: true,
   })
 
