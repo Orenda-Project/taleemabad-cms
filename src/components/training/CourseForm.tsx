@@ -9,12 +9,15 @@ import { useLevels } from "../../hooks/useLevels"
 import { useCreateCourse, useUpdateCourse } from "../../hooks/useCourses"
 import { splitKeywords } from "../../lib/utils"
 import { COURSE_TYPES } from "../../types"
-import type { Course } from "../../types"
+import type { Course, Level } from "../../types"
 import { useToast } from "../../hooks/use-toast"
 
 interface Props {
   course?: Course       // if provided → edit mode
   onSuccess?: () => void
+  // When set, level and type are locked to the current filter selection
+  lockedLevel?: Level
+  lockedType?: string
 }
 
 interface FormValues {
@@ -28,7 +31,7 @@ interface FormValues {
   thumbnail_url: string
 }
 
-export default function CourseForm({ course, onSuccess }: Props) {
+export default function CourseForm({ course, onSuccess, lockedLevel, lockedType }: Props) {
   const { data: levels = [] } = useLevels()
   const createCourse = useCreateCourse()
   const updateCourse = useUpdateCourse()
@@ -47,25 +50,34 @@ export default function CourseForm({ course, onSuccess }: Props) {
           description: course.description ?? "",
           thumbnail_url: course.thumbnail_url ?? "",
         }
-      : { type: "PEDAGOGICAL_PRACTICE", level: "", time_duration: "1", index: "1" },
+      : {
+          type: lockedType ?? "PEDAGOGICAL_PRACTICE",
+          level: lockedLevel ? String(lockedLevel.id) : "",
+          time_duration: "1",
+          index: "1",
+        },
   })
 
   const onSubmit = async (values: FormValues) => {
+    // Always use locked values if present
+    const resolvedLevel = lockedLevel ? lockedLevel.id : Number(values.level)
+    const resolvedType = lockedType ?? values.type
+
+    if (!resolvedLevel) {
+      toast({ title: "Please select a level", variant: "destructive" })
+      return
+    }
+
     const payload = {
       title: values.title,
-      type: values.type,
-      level: Number(values.level),
+      type: resolvedType,
+      level: resolvedLevel,
       index: Number(values.index),
       keywords: values.keywords ? splitKeywords(values.keywords) : null,
       time_duration: Number(values.time_duration) || 1,
       description: values.description || null,
       thumbnail_url: values.thumbnail_url || null,
       is_active: true,
-    }
-
-    if (Number(values.level) === 0) {
-      toast({ title: "Please select a level", variant: "destructive" })
-      return
     }
 
     try {
@@ -93,6 +105,8 @@ export default function CourseForm({ course, onSuccess }: Props) {
     )
   }
 
+  const typeLabel = COURSE_TYPES.find(t => t.value === (lockedType ?? watch("type")))?.label
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="bg-white border rounded-lg p-4 mb-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -104,24 +118,41 @@ export default function CourseForm({ course, onSuccess }: Props) {
           <Label>Title</Label>
           <Input {...register("title", { required: true })} placeholder="Course title" />
         </div>
+
+        {/* Type — locked to filter selection, shown as read-only */}
         <div>
           <Label>Type</Label>
-          <Select onValueChange={v => setValue("type", v)} defaultValue={watch("type")}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {COURSE_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {lockedType ? (
+            <div className="flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm text-slate-700">
+              {typeLabel}
+            </div>
+          ) : (
+            <Select onValueChange={v => setValue("type", v)} defaultValue={watch("type")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {COURSE_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
         </div>
+
+        {/* Level — locked to filter selection, shown as read-only */}
         <div>
           <Label>Level</Label>
-          <Select onValueChange={v => setValue("level", v)} defaultValue={watch("level")}>
-            <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
-            <SelectContent>
-              {levels.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {lockedLevel ? (
+            <div className="flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm text-slate-700">
+              {lockedLevel.name}
+            </div>
+          ) : (
+            <Select onValueChange={v => setValue("level", v)} defaultValue={watch("level")}>
+              <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
+              <SelectContent>
+                {levels.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
         </div>
+
         <div>
           <Label>Index</Label>
           <Input {...register("index")} type="number" />
