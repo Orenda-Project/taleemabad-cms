@@ -5,14 +5,14 @@ export const ORGANIZATIONS: Org[] = [
     id: "FDE",
     name: "Federal - FDE",
     publisher: "NBF",
-    prod_url: "https://schools.niete.pk",
-    stage_url: "https://fde-staging.taleemabad.com",
+    stage_url: import.meta.env.VITE_FDE_STAGE_URL ?? "https://fde-staging.taleemabad.com",
+    prod_url: import.meta.env.VITE_FDE_PROD_URL ?? "https://schools.niete.pk",
   },
   {
     id: "RWL",
     name: "Rawalpindi",
     publisher: "NBF",
-    prod_url: "https://rawalpindi.niete.pk",
-    stage_url: "https://fde-staging.taleemabad.com",
+    stage_url: import.meta.env.VITE_RWL_STAGE_URL ?? "https://fde-staging.taleemabad.com",
+    prod_url: import.meta.env.VITE_RWL_PROD_URL ?? "https://rawalpindi.niete.pk",
   },
 ]
