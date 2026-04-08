@@ -7,6 +7,9 @@ import { Textarea } from "../ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { useTrainingStore } from "../../store/trainingStore"
 import { useAssessmentAssets } from "../../hooks/useMediaAssets"
+import { useCreateQuestions, useUpdateQuestion } from "../../hooks/useQuestions"
+import { useUpdateCourse } from "../../hooks/useCourses"
+import { useToast } from "../../hooks/use-toast"
 import { QUESTION_TYPES, BLOOM_LEVELS } from "../../types"
 import type { Question } from "../../types"
 
@@ -23,16 +26,42 @@ interface FormValues {
 
 interface Props {
   grandQuizMode?: boolean
-  onAdded?: () => void
+  question?: Question   // if provided → edit mode
+  onSuccess?: () => void
 }
 
-export default function QuestionForm({ grandQuizMode, onAdded }: Props) {
-  const { trainingCtx, grandQuizCtx, addStagedQuestion, addStagedGrandQuizQuestion, stagedQuestions } = useTrainingStore()
+export default function QuestionForm({ grandQuizMode, question, onSuccess }: Props) {
+  const { trainingCtx, grandQuizCtx, courseCtx } = useTrainingStore()
   const { data: assessmentAssets = [] } = useAssessmentAssets()
-  const [open, setOpen] = useState(false)
+  const createQuestions = useCreateQuestions()
+  const updateQuestion = useUpdateQuestion()
+  const updateCourse = useUpdateCourse()
+  const { toast } = useToast()
+  const [open, setOpen] = useState(!!question)
+
   const { register, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
-    defaultValues: { type: "mcq", bloom_level: "remember" }
+    defaultValues: question
+      ? {
+          statement: question.question_statement,
+          type: question.type,
+          bloom_level: question.bloom_level,
+          option1: question.options?.[0] ?? "",
+          option2: question.options?.[1] ?? "",
+          option3: question.options?.[2] ?? "",
+          option4: question.options?.[3] ?? "",
+          option5: question.options?.[4] ?? "",
+          option6: question.options?.[5] ?? "",
+          answer1: String(question.answers?.[0] ?? ""),
+          answer2: String(question.answers?.[1] ?? ""),
+          answer3: String(question.answers?.[2] ?? ""),
+          answer4: String(question.answers?.[3] ?? ""),
+          hint1: question.hints?.[0] ?? "",
+          hint2: question.hints?.[1] ?? "",
+          media_asset_id: question.statement_media_asset_id ? String(question.statement_media_asset_id) : "",
+        }
+      : { type: "mcq", bloom_level: "remember" }
   })
+
   const qType = watch("type")
   const showOptions = ["mcq", "msq", "mcq-assets", "msq-assets"].includes(qType)
   const showMedia = ["mcq-assets", "msq-assets"].includes(qType)
@@ -44,22 +73,15 @@ export default function QuestionForm({ grandQuizMode, onAdded }: Props) {
     </Button>
   )
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     const normalizedType = qType.replace("-assets", "") as Question["type"]
-    const options = [values.option1, values.option2, values.option3, values.option4, values.option5, values.option6]
-      .filter(Boolean)
+    const options = [values.option1, values.option2, values.option3, values.option4, values.option5, values.option6].filter(Boolean)
     const answers = isMulti
       ? [values.answer1, values.answer2, values.answer3, values.answer4].filter(Boolean).map(Number)
       : values.answer1 ? [Number(values.answer1)] : []
     const hints = [values.hint1, values.hint2].filter(Boolean)
 
-    const q: Question = {
-      id: Date.now(),
-      uuid: crypto.randomUUID(),
-      training: grandQuizMode ? null : (trainingCtx?.id ?? null),
-      grand_quiz: grandQuizMode ? (grandQuizCtx?.id ?? null) : null,
-      course: null,
-      index: stagedQuestions.length + 1,
+    const payload = {
       type: normalizedType,
       question_statement: values.statement,
       options,
@@ -67,29 +89,42 @@ export default function QuestionForm({ grandQuizMode, onAdded }: Props) {
       hints,
       hint: hints.join("\n") || null,
       bloom_level: values.bloom_level,
-      statement_media_asset: showMedia && values.media_asset_id
-        ? assessmentAssets.find(a => a.id === Number(values.media_asset_id)) ?? null
-        : null,
-      statement_media_asset_id: showMedia && values.media_asset_id ? Number(values.media_asset_id) : null,
+      statement_media_asset: showMedia && values.media_asset_id ? Number(values.media_asset_id) : null,
       is_active: true,
       status: "ReadyForReview",
-      created: new Date().toISOString(),
-      modified: new Date().toISOString(),
-      _local_status: "New",
     }
 
-    if (grandQuizMode) addStagedGrandQuizQuestion(q)
-    else addStagedQuestion(q)
-    reset()
-    setOpen(false)
-    onAdded?.()
+    try {
+      if (question) {
+        await updateQuestion.mutateAsync({ id: question.id, data: payload })
+        toast({ title: "Question updated" })
+      } else {
+        const createPayload = {
+          ...payload,
+          training: grandQuizMode ? null : (trainingCtx?.id ?? null),
+          grand_quiz: grandQuizMode ? (grandQuizCtx?.id ?? null) : null,
+          index: 1,
+        }
+        await createQuestions.mutateAsync([createPayload])
+        toast({ title: "Question saved" })
+        reset()
+        setOpen(false)
+        // OnProd auto-reset
+        if (!grandQuizMode && courseCtx?.status === "OnProd") {
+          await updateCourse.mutateAsync({ id: courseCtx.id, data: { status: "ReadyForReview" } })
+        }
+      }
+      onSuccess?.()
+    } catch (err: any) {
+      toast({ title: "Error", description: err.response?.data?.message, variant: "destructive" })
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="bg-white border rounded-lg p-4 mb-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Add Question</h3>
-        <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>✕</Button>
+        <h3 className="font-semibold">{question ? "Edit Question" : "Add Question"}</h3>
+        <Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); onSuccess?.() }}>✕</Button>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -103,7 +138,7 @@ export default function QuestionForm({ grandQuizMode, onAdded }: Props) {
         </div>
         <div>
           <Label>Bloom Level</Label>
-          <Select onValueChange={v => setValue("bloom_level", v)} defaultValue="remember">
+          <Select onValueChange={v => setValue("bloom_level", v)} defaultValue={watch("bloom_level")}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {BLOOM_LEVELS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
@@ -155,7 +190,9 @@ export default function QuestionForm({ grandQuizMode, onAdded }: Props) {
           <Input {...register("hint2")} />
         </div>
       </div>
-      <Button type="submit">Add to Table</Button>
+      <Button type="submit" disabled={createQuestions.isPending || updateQuestion.isPending}>
+        {question ? "Update" : "Save Question"}
+      </Button>
     </form>
   )
 }

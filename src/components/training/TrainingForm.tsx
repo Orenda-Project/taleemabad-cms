@@ -6,6 +6,9 @@ import { Label } from "../ui/label"
 import { Textarea } from "../ui/textarea"
 import { useTrainingStore } from "../../store/trainingStore"
 import { useMediaAssets } from "../../hooks/useMediaAssets"
+import { useCreateTrainings, useUpdateTraining } from "../../hooks/useTrainings"
+import { useUpdateCourse } from "../../hooks/useCourses"
+import { useToast } from "../../hooks/use-toast"
 import type { Training } from "../../types"
 
 interface FormValues {
@@ -19,15 +22,30 @@ interface FormValues {
 }
 
 interface Props {
-  onAdded?: () => void
+  training?: Training   // if provided → edit mode
+  onSuccess?: () => void
 }
 
-export default function TrainingForm({ onAdded }: Props) {
-  const { courseCtx, addStagedTraining, stagedTrainings } = useTrainingStore()
+export default function TrainingForm({ training, onSuccess }: Props) {
+  const { courseCtx } = useTrainingStore()
   const { data: assets = [] } = useMediaAssets("teacher_training")
-  const [open, setOpen] = useState(false)
+  const createTrainings = useCreateTrainings()
+  const updateTraining = useUpdateTraining()
+  const updateCourse = useUpdateCourse()
+  const { toast } = useToast()
+  const [open, setOpen] = useState(!!training)
   const { register, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
-    defaultValues: { contentTab: "text", index: String((stagedTrainings.length + 1)) }
+    defaultValues: training
+      ? {
+          title: training.title,
+          description: training.description ?? "",
+          index: String(training.index),
+          content: training.content ?? "",
+          media_asset_id: training.media_asset ? String(training.media_asset.id) : "",
+          tags: training.tags?.join(", ") ?? "",
+          contentTab: training.media_asset ? "asset" : "text",
+        }
+      : { contentTab: "text", index: "1" },
   })
   const contentTab = watch("contentTab")
 
@@ -37,39 +55,46 @@ export default function TrainingForm({ onAdded }: Props) {
     </Button>
   )
 
-  const onSubmit = (values: FormValues) => {
-    const staged: Training = {
-      id: Date.now(), // temporary local ID
-      uuid: crypto.randomUUID(),
-      course: courseCtx!.id,
-      course_uuid: courseCtx!.uuid,
+  const onSubmit = async (values: FormValues) => {
+    const payload = {
       title: values.title,
       description: values.description || null,
       content: values.contentTab === "text" ? values.content || null : null,
       media_asset: values.contentTab === "asset" && values.media_asset_id
-        ? assets.find(a => a.id === Number(values.media_asset_id)) ?? null
+        ? Number(values.media_asset_id)
         : null,
       index: Number(values.index),
       is_grand_assessment: false,
       is_active: true,
       status: "ReadyForReview",
       tags: values.tags ? values.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
-      duration: 0,
-      created: new Date().toISOString(),
-      modified: new Date().toISOString(),
-      _local_status: "New",
     }
-    addStagedTraining(staged)
-    reset()
-    setOpen(false)
-    onAdded?.()
+
+    try {
+      if (training) {
+        await updateTraining.mutateAsync({ id: training.id, data: payload })
+        toast({ title: "Training updated" })
+      } else {
+        await createTrainings.mutateAsync([{ ...payload, course: courseCtx!.id }])
+        toast({ title: "Training created" })
+        reset()
+        setOpen(false)
+        // OnProd auto-reset
+        if (courseCtx?.status === "OnProd") {
+          await updateCourse.mutateAsync({ id: courseCtx.id, data: { status: "ReadyForReview" } })
+        }
+      }
+      onSuccess?.()
+    } catch (err: any) {
+      toast({ title: "Error", description: err.response?.data?.message, variant: "destructive" })
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="bg-white border rounded-lg p-4 mb-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Add Training</h3>
-        <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>✕</Button>
+        <h3 className="font-semibold">{training ? "Edit Training" : "Add Training"}</h3>
+        <Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); onSuccess?.() }}>✕</Button>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
@@ -113,7 +138,9 @@ export default function TrainingForm({ onAdded }: Props) {
           )}
         </div>
       </div>
-      <Button type="submit">Add to Table</Button>
+      <Button type="submit" disabled={createTrainings.isPending || updateTraining.isPending}>
+        {training ? "Update" : "Save Training"}
+      </Button>
     </form>
   )
 }
