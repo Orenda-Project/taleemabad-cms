@@ -6,6 +6,7 @@ import { Input } from "../ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { statusColor, cn, formatDate } from "../../lib/utils"
+import { Skeleton } from "../ui/skeleton"
 import { ASSET_TYPES } from "../../types"
 import type { MediaAsset } from "../../types"
 import AssetForm from "./AssetForm"
@@ -51,7 +52,7 @@ export default function AssetTable() {
         </Select>
       </div>
 
-      {isLoading ? <div className="text-slate-400 text-sm">Loading...</div> : (
+      {isLoading ? <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div> : (
         <div className="bg-white border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b">

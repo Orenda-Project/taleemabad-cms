@@ -5,6 +5,7 @@ import { useTrainingStore } from "../../store/trainingStore"
 import { COURSE_TYPES } from "../../types"
 import type { Course } from "../../types"
 import { statusColor, cn } from "../../lib/utils"
+import { Skeleton } from "../ui/skeleton"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Badge } from "../ui/badge"
@@ -67,7 +68,9 @@ export default function CourseTable() {
       </div>
 
       {isLoading ? (
-        <div className="text-slate-400 text-sm">Loading...</div>
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+        </div>
       ) : (
         <div className="bg-white border rounded-lg overflow-hidden">
           <table className="w-full text-sm">

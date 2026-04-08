@@ -5,6 +5,7 @@ import { useUpdateCourse } from "../../hooks/useCourses"
 import { Badge } from "../ui/badge"
 import { Button } from "../ui/button"
 import { statusColor, cn } from "../../lib/utils"
+import { Skeleton } from "../ui/skeleton"
 import QuestionForm from "./QuestionForm"
 import { useToast } from "../../hooks/use-toast"
 
@@ -106,7 +107,7 @@ export default function QuestionTable({ grandQuizMode }: Props) {
           Push Selected ({selected.size})
         </Button>
       </div>
-      {isLoading ? <div className="text-slate-400 text-sm">Loading...</div> : (
+      {isLoading ? <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div> : (
         <div className="bg-white border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b">

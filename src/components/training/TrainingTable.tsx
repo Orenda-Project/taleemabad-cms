@@ -6,6 +6,7 @@ import { useUpdateCourse } from "../../hooks/useCourses"
 import { Badge } from "../ui/badge"
 import { Button } from "../ui/button"
 import { statusColor, cn } from "../../lib/utils"
+import { Skeleton } from "../ui/skeleton"
 import TrainingForm from "./TrainingForm"
 import type { Training } from "../../types"
 import { useToast } from "../../hooks/use-toast"
@@ -111,7 +112,9 @@ export default function TrainingTable() {
       </div>
 
       {isLoading ? (
-        <div className="text-slate-400 text-sm">Loading...</div>
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+        </div>
       ) : (
         <div className="bg-white border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
