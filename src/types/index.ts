@@ -129,6 +129,13 @@ export const COURSE_TYPES = [
   { value: "SUBJECT", label: "Subject" },
 ]
 
+// Course types available per vendor
+export const VENDOR_COURSE_TYPES: Record<string, typeof COURSE_TYPES> = {
+  TALEEMABAD: COURSE_TYPES,
+  BEACONHOUSE: COURSE_TYPES.filter(t => t.value === "SUBJECT"),
+  NIETE: COURSE_TYPES.filter(t => t.value === "PEDAGOGICAL_PRACTICE"),
+}
+
 export const QUESTION_TYPES = [
   { value: "mcq", label: "MCQ" },
   { value: "msq", label: "MSQ" },

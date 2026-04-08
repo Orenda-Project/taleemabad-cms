@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useCourses } from "../../hooks/useCourses"
 import { useLevels } from "../../hooks/useLevels"
 import { useTrainingStore } from "../../store/trainingStore"
-import { COURSE_TYPES } from "../../types"
+import { COURSE_TYPES, VENDOR_COURSE_TYPES } from "../../types"
 import type { Course } from "../../types"
 import { statusColor, cn } from "../../lib/utils"
 import { Skeleton } from "../ui/skeleton"
@@ -27,6 +27,7 @@ export default function CourseTable() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [duplicateCourse, setDuplicateCourse] = useState<Course | null>(null)
 
+  const vendorTypes = VENDOR_COURSE_TYPES[selectedVendor] ?? COURSE_TYPES
   const { data: levels = [], isLoading: levelsLoading } = useLevels(selectedVendor)
   const { data: courses = [], isLoading } = useCourses(
     selectedLevel ? { type: selectedType || undefined, level: selectedLevel } : undefined
@@ -42,6 +43,15 @@ export default function CourseTable() {
       setSelectedLevel(undefined)
     }
   }, [levels])
+
+  // Auto-select the only type when vendor has just one
+  useEffect(() => {
+    if (vendorTypes.length === 1) {
+      setSelectedType(vendorTypes[0].value)
+    } else {
+      setSelectedType("")
+    }
+  }, [selectedVendor])
 
   const filtered = courses.filter(c =>
     c.title.toLowerCase().includes(search.toLowerCase())
@@ -71,7 +81,7 @@ export default function CourseTable() {
       {/* Vendor selector */}
       <div className="flex items-center gap-3 mb-4">
         <span className="text-sm font-medium text-slate-600">Vendor</span>
-        <Select value={selectedVendor} onValueChange={v => { setSelectedVendor(v); setSelectedLevel(undefined) }}>
+        <Select value={selectedVendor} onValueChange={v => { setSelectedVendor(v); setSelectedLevel(undefined); setSelectedType("") }}>
           <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
@@ -105,16 +115,18 @@ export default function CourseTable() {
         )}
       </div>
 
-      {/* Course type filter */}
+      {/* Course type filter — only show "All Types" when vendor has multiple types */}
       <div className="flex gap-2 mb-4 flex-wrap">
-        <Button
-          size="sm"
-          variant={selectedType === "" ? "default" : "outline"}
-          onClick={() => setSelectedType("")}
-        >
-          All Types
-        </Button>
-        {COURSE_TYPES.map(t => (
+        {vendorTypes.length > 1 && (
+          <Button
+            size="sm"
+            variant={selectedType === "" ? "default" : "outline"}
+            onClick={() => setSelectedType("")}
+          >
+            All Types
+          </Button>
+        )}
+        {vendorTypes.map(t => (
           <Button
             key={t.value}
             size="sm"
