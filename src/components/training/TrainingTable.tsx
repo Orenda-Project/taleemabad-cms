@@ -25,9 +25,9 @@ export default function TrainingTable() {
   return (
     <div>
       {editingTraining ? (
-        <TrainingForm training={editingTraining} onSuccess={() => setEditingTraining(null)} />
+        <TrainingForm key={editingTraining.id} training={editingTraining} onSuccess={() => setEditingTraining(null)} />
       ) : (
-        <TrainingForm />
+        <TrainingForm key="new" />
       )}
 
       {isLoading ? (

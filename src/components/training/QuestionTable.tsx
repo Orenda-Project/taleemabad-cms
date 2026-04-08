@@ -25,12 +25,13 @@ export default function QuestionTable({ grandQuizMode }: Props) {
     <div>
       {editingQuestion ? (
         <QuestionForm
+          key={editingQuestion.id}
           grandQuizMode={grandQuizMode}
           question={editingQuestion}
           onSuccess={() => setEditingQuestion(null)}
         />
       ) : (
-        <QuestionForm grandQuizMode={grandQuizMode} />
+        <QuestionForm key="new" grandQuizMode={grandQuizMode} />
       )}
 
       {isLoading ? (
