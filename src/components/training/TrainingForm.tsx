@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
@@ -34,6 +34,11 @@ export default function TrainingForm({ training, onSuccess }: Props) {
   const updateCourse = useUpdateCourse()
   const { toast } = useToast()
   const [open, setOpen] = useState(!!training)
+  const [assetSearch, setAssetSearch] = useState("")
+  const filteredAssets = useMemo(() =>
+    assets.filter(a => a.name.toLowerCase().includes(assetSearch.toLowerCase())),
+    [assets, assetSearch]
+  )
   const { register, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: training
       ? {
@@ -129,12 +134,25 @@ export default function TrainingForm({ training, onSuccess }: Props) {
           {contentTab === "text" ? (
             <Textarea {...register("content")} rows={4} placeholder="Training content..." />
           ) : (
-            <select {...register("media_asset_id")} className="w-full border rounded px-3 py-2 text-sm">
-              <option value="">-- Select asset --</option>
-              {assets.map(a => (
-                <option key={a.id} value={a.id}>{a.name} ({a.type})</option>
-              ))}
-            </select>
+            <div className="space-y-2">
+              <Input
+                placeholder="Search assets..."
+                value={assetSearch}
+                onChange={(e) => setAssetSearch(e.target.value)}
+                className="text-sm"
+              />
+              <select {...register("media_asset_id")} className="w-full border rounded px-3 py-2 text-sm max-h-48">
+                <option value="">-- Select asset --</option>
+                {filteredAssets.length > 0 ? (
+                  filteredAssets.map(a => (
+                    <option key={a.id} value={a.id}>{a.name} ({a.type})</option>
+                  ))
+                ) : (
+                  <option disabled>No assets found</option>
+                )}
+              </select>
+              <p className="text-xs text-slate-500">{filteredAssets.length} assets</p>
+            </div>
           )}
         </div>
       </div>

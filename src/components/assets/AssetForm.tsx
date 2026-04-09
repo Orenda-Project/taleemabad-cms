@@ -1,10 +1,12 @@
 import { useForm } from "react-hook-form"
+import { useState, useMemo } from "react"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { Textarea } from "../ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { useCreateMediaAsset, useUpdateMediaAsset } from "../../hooks/useMediaAssets"
+import { useS3Upload } from "../../hooks/useS3Upload"
 import { ASSET_TYPES, ASSET_CATEGORIES } from "../../types"
 import type { MediaAsset } from "../../types"
 import { useToast } from "../../hooks/use-toast"
@@ -27,14 +29,33 @@ interface Props {
 export default function AssetForm({ asset, onSuccess, onCancel }: Props) {
   const create = useCreateMediaAsset()
   const update = useUpdateMediaAsset()
+  const { uploadToS3, uploading, progress, error: uploadError } = useS3Upload()
   const { toast } = useToast()
-  const uuid = asset?.uuid ?? crypto.randomUUID()
+  // Generate UUID only once and keep it stable
+  const uuid = useMemo(() => asset?.uuid ?? crypto.randomUUID(), [asset?.uuid])
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const { register, handleSubmit, reset, setValue, watch } = useForm<FormValues>({
     defaultValues: asset
       ? { name: asset.name, type: asset.type, categories: asset.category, description: asset.description ?? "", url: asset.url, uuid }
       : { type: "video", categories: [], uuid },
   })
+
+  async function handleFileUpload() {
+    if (!selectedFile) {
+      toast({ title: "Select a file", description: "Please select a file to upload", variant: "destructive" })
+      return
+    }
+
+    const s3Url = await uploadToS3(selectedFile, uuid)
+    if (s3Url) {
+      setValue("url", s3Url)
+      toast({ title: "Upload complete", description: "File uploaded to S3" })
+      setSelectedFile(null)
+    } else {
+      toast({ title: "Upload failed", description: uploadError || "Failed to upload file", variant: "destructive" })
+    }
+  }
 
   function validateAndSubmit(values: FormValues) {
     if (!values.url) {
@@ -115,10 +136,39 @@ export default function AssetForm({ asset, onSuccess, onCancel }: Props) {
           </div>
         </div>
         <div className="col-span-2">
-          <Label>Asset URL (S3)</Label>
-          <Input {...register("url")} placeholder={`https://asset-manager-in-review.s3.amazonaws.com/${uuid}.mp4`} />
+          <Label>Upload File to S3</Label>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                type="file"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                disabled={uploading}
+                className="flex-1"
+              />
+              <Button onClick={handleFileUpload} disabled={uploading || !selectedFile}>
+                {uploading ? `Uploading... ${progress}%` : "Upload to S3"}
+              </Button>
+            </div>
+            {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
+            {uploading && (
+              <div className="w-full bg-slate-200 rounded h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
+          </div>
+
+          <Label className="mt-3 block">Asset URL (S3) - Auto-populated after upload</Label>
+          <Input
+            {...register("url")}
+            readOnly
+            className="bg-slate-50"
+            placeholder={`https://asset-manager-in-review.s3.amazonaws.com/${uuid}.mp4`}
+          />
           <p className="text-xs text-slate-400 mt-1">
-            Upload file to S3 bucket <code>asset-manager-in-review</code> with filename <code>{uuid}</code>, then paste the URL here.
+            Select a file and click "Upload to S3". The URL will be auto-populated.
           </p>
         </div>
         <div className="col-span-2">
