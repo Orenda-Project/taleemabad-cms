@@ -1,0 +1,24 @@
+{
+  "model": "haiku",
+  "effort": "auto",
+  "allowedTools": [
+    "Bash",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Agent"
+  ],
+  "hooks": {
+    "SessionStart": {
+      "description": "Verify dev environment on session start",
+      "command": "echo 'CMS Dev Session Started' && npm list vite react 2>/dev/null | head -3"
+    },
+    "SessionEnd": {
+      "description": "Cleanup on session end",
+      "command": "echo 'CMS Dev Session Ended' && git status --short"
+    }
+  },
+  "defaultPermissionMode": "acceptEdits"
+}
