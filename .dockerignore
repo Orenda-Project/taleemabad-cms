@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+dist
+.git
+.gitignore
+.github
+README.md
+.env
+.env.example
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+.obsidian-project
+excalidraw.log

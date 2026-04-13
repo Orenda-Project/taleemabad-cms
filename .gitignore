@@ -1,7 +1,13 @@
 node_modules
 dist
 .env
+.env.staging
+.env.production
 *.local
 .DS_Store
 dist-ssr
 coverage
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
