@@ -19,12 +19,14 @@ export default function AssetTable() {
   const [editAsset, setEditAsset] = useState<MediaAsset | null>(null)
   const [showAdd, setShowAdd] = useState(false)
 
-  const filtered = assets.filter(a => {
-    const matchSearch = a.name.toLowerCase().includes(search.toLowerCase())
-    const matchType = !typeFilter || a.type === typeFilter
-    const matchStatus = !statusFilter || a.status === statusFilter
-    return matchSearch && matchType && matchStatus
-  })
+  const filtered = assets
+    .filter(a => {
+      const matchSearch = a.name.toLowerCase().includes(search.toLowerCase())
+      const matchType = !typeFilter || a.type === typeFilter
+      const matchStatus = !statusFilter || a.status === statusFilter
+      return matchSearch && matchType && matchStatus
+    })
+    .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
 
   return (
     <div>

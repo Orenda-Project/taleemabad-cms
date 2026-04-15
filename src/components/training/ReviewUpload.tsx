@@ -20,6 +20,7 @@ import type { Level } from "../../types"
 const VENDORS = [
   { value: "TALEEMABAD", label: "Taleemabad" },
   { value: "BEACONHOUSE", label: "Beaconhouse" },
+  { value: "OXBRIDGE", label: "Oxbridge" },
   { value: "NIETE", label: "NIETE" },
 ]
 

@@ -29,7 +29,7 @@ interface Props {
 export default function AssetForm({ asset, onSuccess, onCancel }: Props) {
   const create = useCreateMediaAsset()
   const update = useUpdateMediaAsset()
-  const { uploadToS3, uploading, progress, error: uploadError } = useS3Upload()
+  const { uploadToS3, uploading, progress, error: uploadError, cancelUpload } = useS3Upload()
   const { toast } = useToast()
   // Generate UUID only once and keep it stable
   const uuid = useMemo(() => asset?.uuid ?? crypto.randomUUID(), [asset?.uuid])
@@ -145,17 +145,37 @@ export default function AssetForm({ asset, onSuccess, onCancel }: Props) {
                 disabled={uploading}
                 className="flex-1"
               />
-              <Button onClick={handleFileUpload} disabled={uploading || !selectedFile}>
-                {uploading ? `Uploading... ${progress}%` : "Upload to S3"}
-              </Button>
+              {uploading ? (
+                <Button onClick={cancelUpload} variant="destructive">
+                  Cancel
+                </Button>
+              ) : (
+                <Button onClick={handleFileUpload} disabled={!selectedFile}>
+                  Upload to S3
+                </Button>
+              )}
             </div>
-            {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
+            {selectedFile && !uploading && (
+              <p className="text-xs text-slate-500">
+                File: {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)}MB)
+              </p>
+            )}
+            {uploadError && (
+              <div className="p-2 bg-red-50 border border-red-200 rounded">
+                <p className="text-xs text-red-700">{uploadError}</p>
+              </div>
+            )}
             {uploading && (
-              <div className="w-full bg-slate-200 rounded h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded transition-all"
-                  style={{ width: `${progress}%` }}
-                />
+              <div>
+                <div className="w-full bg-slate-200 rounded h-2 overflow-hidden">
+                  <div
+                    className="bg-blue-500 h-2 rounded transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Uploading... {progress}%
+                </p>
               </div>
             )}
           </div>
