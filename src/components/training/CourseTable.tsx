@@ -29,8 +29,8 @@ export default function CourseTable() {
   const [duplicateCourse, setDuplicateCourse] = useState<Course | null>(null)
 
   const vendorTypes = VENDOR_COURSE_TYPES[selectedVendor] ?? []
-  const { data: levels = [], isLoading: levelsLoading } = useLevels(selectedVendor)
-  const { data: courses = [], isLoading } = useCourses(
+  const { data: levels = [], isLoading: levelsLoading, error: levelsError } = useLevels(selectedVendor)
+  const { data: courses = [], isLoading, error: coursesError } = useCourses(
     selectedLevel ? { type: selectedType || undefined, level: selectedLevel.id } : undefined
   )
   const { setCourseCtx } = useTrainingStore()
@@ -57,6 +57,13 @@ export default function CourseTable() {
 
   return (
     <div>
+      {(levelsError || coursesError) && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">
+            <strong>Error loading data:</strong> {(levelsError as any)?.message || (coursesError as any)?.message || "Failed to fetch courses or levels"}
+          </p>
+        </div>
+      )}
       {/* ── Filters (always on top) ── */}
       <div className="bg-slate-50 border rounded-lg p-4 mb-4 space-y-3">
 

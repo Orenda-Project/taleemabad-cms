@@ -6,4 +6,5 @@ export const useLevels = (vendor?: string) =>
     queryKey: ["levels", vendor],
     queryFn: () => getLevels(vendor),
     staleTime: Infinity,
+    placeholderData: [],
   })
