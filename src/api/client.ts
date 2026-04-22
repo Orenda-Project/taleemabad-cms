@@ -3,6 +3,13 @@ import axios from "axios"
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string
 const API_KEY = import.meta.env.VITE_API_KEY as string
 
+// Ensure API responses are arrays (not error objects or other types)
+export const ensureArray = <T,>(data: any): T[] => {
+  if (Array.isArray(data)) return data
+  console.warn("API returned non-array data:", data)
+  return []
+}
+
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
