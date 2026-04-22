@@ -16,13 +16,15 @@ export const getAssessmentAssets = () =>
     .then(r => (Array.isArray(r.data) ? r.data.map(normalizeMediaAsset) : []).filter(a => a.type !== "video"))
 
 export const createMediaAsset = (data: Record<string, unknown>) =>
-  apiClient.post<MediaAsset>("/api/v1/internal/media_assets/", data).then(r => r.data)
+  apiClient.post<MediaAsset>("/api/v1/internal/media_assets/", data).then(r => normalizeMediaAsset(r.data))
 
 export const updateMediaAsset = (id: number, data: Record<string, unknown>) =>
-  apiClient.patch<MediaAsset>(`/api/v1/internal/media_assets/${id}/`, data).then(r => r.data)
+  apiClient.patch<MediaAsset>(`/api/v1/internal/media_assets/${id}/`, data).then(r => normalizeMediaAsset(r.data))
 
 export const bulkUpdateMediaAssets = (data: Record<string, unknown>[]) =>
-  apiClient.post("/api/v1/internal/media_assets/batch/", data).then(r => r.data)
+  apiClient.post<MediaAsset[]>("/api/v1/internal/media_assets/batch/", data).then(r =>
+    Array.isArray(r.data) ? r.data.map(normalizeMediaAsset) : []
+  )
 
 export const changeAssetBucket = (assetIds: number[], status: string) =>
   apiClient.post("/api/v1/internal/media_assets/change_asset_files_bucket/", {
