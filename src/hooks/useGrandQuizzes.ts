@@ -1,8 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getGrandQuizzes, createGrandQuiz, updateGrandQuiz } from "../api/grandQuizzes"
+import { useSafeQuery } from "./useSafeQuery"
+import type { GrandQuiz } from "../types"
 
 export const useGrandQuizzes = (level: number | undefined) =>
-  useQuery({
+  useSafeQuery<GrandQuiz[]>({
     queryKey: ["grand-quizzes", level],
     queryFn: () => getGrandQuizzes(level!),
     enabled: !!level,

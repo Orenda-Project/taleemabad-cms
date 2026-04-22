@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query"
 import { getLevels } from "../api/levels"
+import { useSafeQuery } from "./useSafeQuery"
+import type { Level } from "../types"
 
 export const useLevels = (vendor?: string) =>
-  useQuery({
+  useSafeQuery<Level[]>({
     queryKey: ["levels", vendor],
     queryFn: () => getLevels(vendor),
     staleTime: Infinity,
-    placeholderData: [],
   })

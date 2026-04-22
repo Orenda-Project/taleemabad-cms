@@ -1,8 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getTrainings, createTrainings, updateTraining } from "../api/trainings"
+import { useSafeQuery } from "./useSafeQuery"
+import type { Training } from "../types"
 
 export const useTrainings = (courseUuid: string | undefined) =>
-  useQuery({
+  useSafeQuery<Training[]>({
     queryKey: ["trainings", courseUuid],
     queryFn: () => getTrainings(courseUuid!),
     enabled: !!courseUuid,

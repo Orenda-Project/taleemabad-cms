@@ -1,15 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getCourses, getCoursesForReview, createCourse, updateCourse } from "../api/courses"
+import { useSafeQuery } from "./useSafeQuery"
+import type { Course } from "../types"
 
 export const useCourses = (params?: { type?: string; level?: number }) =>
-  useQuery({
+  useSafeQuery<Course[]>({
     queryKey: ["courses", params?.type, params?.level],
     queryFn: () => getCourses(params),
     enabled: true,
   })
 
 export const useCoursesForReview = (params?: { level?: number; vendor?: string }) =>
-  useQuery({
+  useSafeQuery<Course[]>({
     queryKey: ["courses", "review", params?.level, params?.vendor],
     queryFn: () => getCoursesForReview(params),
   })

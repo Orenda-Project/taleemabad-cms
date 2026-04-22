@@ -1,15 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getQuestions, getGrandQuizQuestions, createQuestions, updateQuestion } from "../api/questions"
+import { useSafeQuery } from "./useSafeQuery"
+import type { Question } from "../types"
 
 export const useQuestions = (trainingUuid: string | undefined) =>
-  useQuery({
+  useSafeQuery<Question[]>({
     queryKey: ["questions", trainingUuid],
     queryFn: () => getQuestions(trainingUuid!),
     enabled: !!trainingUuid,
   })
 
 export const useGrandQuizQuestions = (grandQuizId: number | undefined) =>
-  useQuery({
+  useSafeQuery<Question[]>({
     queryKey: ["gq-questions", grandQuizId],
     queryFn: () => getGrandQuizQuestions(grandQuizId!),
     enabled: !!grandQuizId,
