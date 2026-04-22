@@ -12,7 +12,7 @@ import type { MediaAsset } from "../../types"
 import AssetForm from "./AssetForm"
 
 export default function AssetTable() {
-  const { data: assets = [], isLoading } = useMediaAssets()
+  const { data: assets = [], isLoading, error } = useMediaAssets()
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
@@ -30,6 +30,13 @@ export default function AssetTable() {
 
   return (
     <div>
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">
+            <strong>Error loading assets:</strong> {(error as any)?.message || "Failed to fetch assets"}
+          </p>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">All Assets</h2>
         <Button onClick={() => setShowAdd(true)}>+ Add Asset</Button>
@@ -74,7 +81,7 @@ export default function AssetTable() {
                   <td className="px-4 py-2">{asset.type}</td>
                   <td className="px-4 py-2">
                     <div className="flex gap-1 flex-wrap">
-                      {asset.category.map(c => (
+                      {(asset.category || []).map(c => (
                         <Badge key={c} className="text-xs bg-slate-100 text-slate-600">{c}</Badge>
                       ))}
                     </div>

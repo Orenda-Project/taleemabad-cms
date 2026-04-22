@@ -5,10 +5,18 @@ import {
 } from "../api/mediaAssets"
 
 export const useMediaAssets = (category?: string) =>
-  useQuery({ queryKey: ["media-assets", category], queryFn: () => getMediaAssets(category) })
+  useQuery({
+    queryKey: ["media-assets", category],
+    queryFn: () => getMediaAssets(category),
+    placeholderData: [],
+  })
 
 export const useAssessmentAssets = () =>
-  useQuery({ queryKey: ["assessment-assets"], queryFn: getAssessmentAssets })
+  useQuery({
+    queryKey: ["assessment-assets"],
+    queryFn: getAssessmentAssets,
+    placeholderData: [],
+  })
 
 export const useCreateMediaAsset = () => {
   const qc = useQueryClient()
