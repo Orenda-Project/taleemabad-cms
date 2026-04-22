@@ -37,7 +37,7 @@ export default function AssetForm({ asset, onSuccess, onCancel }: Props) {
 
   const { register, handleSubmit, reset, setValue, watch } = useForm<FormValues>({
     defaultValues: asset
-      ? { name: asset.name, type: asset.type, categories: asset.category, description: asset.description ?? "", url: asset.url, uuid }
+      ? { name: asset.name, type: asset.type, categories: Array.isArray(asset.category) ? asset.category : [], description: asset.description ?? "", url: asset.url, uuid }
       : { type: "video", categories: [], uuid },
   })
 
@@ -62,7 +62,9 @@ export default function AssetForm({ asset, onSuccess, onCancel }: Props) {
       toast({ title: "Upload required", description: "Please enter the asset URL", variant: "destructive" })
       return
     }
-    const filename = values.url.split("/").pop()?.split(".")[0]
+    // Extract filename, ignoring query parameters from presigned URLs
+    const urlPath = values.url.split("?")[0]
+    const filename = urlPath.split("/").pop()?.split(".")[0]
     if (filename !== values.uuid) {
       toast({
         title: "UUID mismatch",

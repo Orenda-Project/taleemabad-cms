@@ -176,7 +176,7 @@ export default function AssetPromotion() {
                   <td className="px-4 py-2">{asset.type}</td>
                   <td className="px-4 py-2">
                     <div className="flex gap-1">
-                      {asset.category.map(c => (
+                      {(asset.category || []).map(c => (
                         <Badge key={c} className="text-xs bg-slate-100 text-slate-600">{c}</Badge>
                       ))}
                     </div>
