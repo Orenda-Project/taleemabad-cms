@@ -12,8 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the app
-RUN npm run build
+# Build the app with production environment
+RUN NODE_ENV=production npm run build
 
 # Stage 2: Production Runtime
 FROM node:20-alpine AS runtime
