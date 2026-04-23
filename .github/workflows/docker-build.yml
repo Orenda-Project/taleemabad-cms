@@ -39,6 +39,7 @@ jobs:
           VITE_RWL_STAGE_URL=https://fde-staging.taleemabad.com
           VITE_RWL_PROD_URL=https://rawalpindi.niete.pk
           EOF
+          cat .env.production
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
