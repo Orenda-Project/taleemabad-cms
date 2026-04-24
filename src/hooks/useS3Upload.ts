@@ -99,7 +99,6 @@ export function useS3Upload() {
           )
 
           xhr.open("PUT", presigned_url)
-          xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream")
           xhr.send(file)
         })
 
