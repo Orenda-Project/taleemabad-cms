@@ -9,7 +9,7 @@ services:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
       - VITE_API_KEY=${VITE_API_KEY:-your-api-key-here}
       - VITE_FDE_STAGE_URL=${VITE_FDE_STAGE_URL:-https://fde-staging.taleemabad.com}
-      - VITE_FDE_PROD_URL=${VITE_FDE_PROD_URL:-https://schools.niete.pk}
+      - VITE_FDE_PROD_URL=${VITE_FDE_PROD_URL:-https://fde-staging.taleemabad.com}
       - VITE_RWL_STAGE_URL=${VITE_RWL_STAGE_URL:-https://fde-staging.taleemabad.com}
       - VITE_RWL_PROD_URL=${VITE_RWL_PROD_URL:-https://rawalpindi.niete.pk}
     restart: unless-stopped
