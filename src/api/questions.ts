@@ -7,10 +7,12 @@ export const getQuestions = (trainingUuid: string) =>
 export const getGrandQuizQuestions = (grandQuizId: number) =>
   apiClient.get<Question[]>(`/api/v1/training_questions/?grand_quiz=${grandQuizId}`).then(r => ensureArray<Question>(r.data))
 
-export const getBulkQuestions = (trainingIds: number[], grandQuizIds: number[]) =>
-  apiClient.get<Question[]>(
-    `/api/v1/training_questions/?is_active=null&training_ids=${trainingIds.join(",")}&grand_quiz_ids=${grandQuizIds.join(",")}`
-  ).then(r => ensureArray<Question>(r.data))
+export const getBulkQuestions = (trainingIds: number[], grandQuizIds: number[]) => {
+  let url = `/api/v1/training_questions/?is_active=null`
+  if (trainingIds.length > 0) url += `&training_ids=${trainingIds.join(",")}`
+  if (grandQuizIds.length > 0) url += `&grand_quiz_ids=${grandQuizIds.join(",")}`
+  return apiClient.get<Question[]>(url).then(r => ensureArray<Question>(r.data))
+}
 
 export const getBulkGrandQuizQuestions = (grandQuizIds: number[]) =>
   grandQuizIds.length === 0

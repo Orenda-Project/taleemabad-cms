@@ -17,6 +17,13 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useToast } from "../../hooks/use-toast"
 import type { Level } from "../../types"
 
+// Handle both array and paginated responses from API
+const ensureArray = (data: any): any[] => {
+  if (Array.isArray(data)) return data
+  if (data?.results && Array.isArray(data.results)) return data.results
+  return []
+}
+
 const VENDORS = [
   { value: "TALEEMABAD", label: "Taleemabad" },
   { value: "BEACONHOUSE", label: "Beaconhouse" },
@@ -116,57 +123,156 @@ export default function ReviewUpload() {
       }
       setStep(0, "done")
 
-      // ── Step 1: Create course on prod ────────────────────────────────
+      // ── Step 1: Create or update course on prod ──────────────────
       setStep(1, "pending")
+      console.log(`[Step 1] Checking if course exists: ${course.title}`)
+
       const coursePayload = {
         uuid: course.uuid, title: course.title, description: course.description,
         keywords: course.keywords, time_duration: course.time_duration, index: course.index,
         thumbnail_url: course.thumbnail_url, is_active: true, status: "OnProd",
         type: course.type, level: course.level,
       }
-      const prodCourseRes = await pc.post<{ id: number }>("/api/v1/internal/courses/", coursePayload)
-      const prodCourseId = prodCourseRes.data.id
+
+      // Check if course with this UUID already exists
+      let prodCourseId: number
+      try {
+        const existingCourses = await pc.get(
+          `/api/v1/courses/?uuid=${course.uuid}`
+        )
+        const coursesList = ensureArray(existingCourses.data)
+        if (coursesList.length > 0) {
+          // Update existing course
+          prodCourseId = coursesList[0].id
+          console.log(`[Step 1] Course already exists with ID: ${prodCourseId}, updating...`)
+          await pc.patch(`/api/v1/internal/courses/${prodCourseId}/`, coursePayload)
+          console.log(`[Step 1] Course updated with ID: ${prodCourseId}`)
+        } else {
+          // Create new course
+          console.log(`[Step 1] Creating new course: ${course.title}`)
+          const prodCourseRes = await pc.post<{ id: number }>("/api/v1/internal/courses/", coursePayload)
+          prodCourseId = prodCourseRes.data.id
+          console.log(`[Step 1] Course created with ID: ${prodCourseId}`)
+        }
+      } catch (err) {
+        console.error(`[Step 1] Error checking/creating course:`, err)
+        throw err
+      }
+
       setStep(1, "done")
 
       // ── Step 2: Upload trainings ──────────────────────────────────────
       setStep(2, "pending")
       const trainings = stagingTrainingsForAssets
-      const trainingPayload = trainings.map(t => ({
-        uuid: t.uuid, title: t.title, description: t.description,
-        content: t.content, index: t.index, is_grand_assessment: t.is_grand_assessment,
-        course: prodCourseId,
-        is_active: true, status: "OnProd",
-        media_asset: t.media_asset?.id ? (assetIdMap[t.media_asset.id] ?? null) : null,
-        tags: t.tags ?? [],
-      }))
-      const prodTrainingsRes = await pc.post<{ id: number; uuid: string }[]>(
-        "/api/v1/internal/trainings/", trainingPayload
+      console.log(`[Step 2] Found ${trainings.length} trainings to upload`)
+      console.log(`[Step 2] Using course ID: ${prodCourseId}`)
+
+      // Check which trainings already exist (scoped to this course)
+      const existingProdTrainings = await pc.get(
+        `/api/v1/trainings/?course=${prodCourseId}&limit=1000`
       )
+      const existingTrainingsList = ensureArray(existingProdTrainings.data)
+      const existingUuids = new Set(existingTrainingsList.map(t => t.uuid))
+      console.log(`[Step 2] Found ${existingUuids.size} existing trainings on prod`)
+
+      // Only create new trainings that don't exist
+      const newTrainingPayload = trainings
+        .filter(t => !existingUuids.has(t.uuid))
+        .map(t => ({
+          uuid: t.uuid, title: t.title, description: t.description,
+          content: t.content, index: t.index, is_grand_assessment: t.is_grand_assessment,
+          course: prodCourseId,
+          is_active: true, status: "OnProd",
+          media_asset: t.media_asset?.id ? (assetIdMap[t.media_asset.id] ?? null) : null,
+          tags: t.tags ?? [],
+        }))
+
+      if (newTrainingPayload.length > 0) {
+        console.log(`[Step 2] Posting ${newTrainingPayload.length} new trainings to prod...`)
+        await pc.post("/api/v1/internal/trainings/", newTrainingPayload)
+      } else {
+        console.log(`[Step 2] All trainings already exist on prod - skipping POST`)
+      }
+
+      // Fetch all trainings from prod to get IDs (scoped to this course)
+      const prodTrainingsRes = await pc.get(
+        `/api/v1/trainings/?course=${prodCourseId}&limit=1000`
+      )
+      const prodTrainingsList = ensureArray(prodTrainingsRes.data)
+
+      console.log(`[Step 2] Response received:`, prodTrainingsList)
       const stagingTrainingByUuid = Object.fromEntries(trainings.map(t => [t.uuid, t.id]))
-      const prodTrainingByUuid = Object.fromEntries(prodTrainingsRes.data.map(pt => [pt.uuid, pt.id]))
+      const prodTrainingByUuid = Object.fromEntries(prodTrainingsList.map(pt => [pt.uuid, pt.id]))
+
+      console.log(`[Step 2] Staging trainings:`, stagingTrainingByUuid)
+      console.log(`[Step 2] Prod trainings:`, prodTrainingByUuid)
+
       const trainingIdMap: Record<number, number> = {}
       for (const [uuid, stagingId] of Object.entries(stagingTrainingByUuid)) {
-        if (prodTrainingByUuid[uuid]) trainingIdMap[stagingId] = prodTrainingByUuid[uuid]
+        if (prodTrainingByUuid[uuid]) {
+          trainingIdMap[stagingId] = prodTrainingByUuid[uuid]
+        } else {
+          console.warn(`[Step 2] WARNING: Training UUID ${uuid} not found in prod response`)
+        }
       }
+
+      console.log(`[Step 2] Training ID Map:`, trainingIdMap)
       setStep(2, "done")
 
       // ── Step 3: Upload training questions ────────────────────────────
       setStep(3, "pending")
       const trainingQuestions = stagingQuestionsForAssets
+      console.log(`[Step 3] Found ${trainingQuestions.length} training questions to upload`)
+
       if (trainingQuestions.length > 0) {
-        const qPayload = trainingQuestions.map(q => ({
-          uuid: q.uuid, index: q.index,
-          type: q.type, question_statement: q.question_statement,
-          options: q.options, answers: q.answers, hints: q.hints,
-          bloom_level: q.bloom_level,
-          statement_media_asset: q.statement_media_asset_id
-            ? (assetIdMap[q.statement_media_asset_id] ?? null)
-            : null,
-          is_active: true, status: "OnProd",
-          training: q.training ? (trainingIdMap[q.training] ?? null) : null,
-          grand_quiz: null,
-        }))
-        await pc.post("/api/v1/internal/training_question/", qPayload)
+        // Get training IDs for scoped query (for this course's trainings)
+        const trainingIdsForQs = Object.values(trainingIdMap)
+
+        // Check which questions already exist (scoped to course trainings)
+        let existingQUuids = new Set<string>()
+        if (trainingIdsForQs.length > 0) {
+          const trainingIdsStr = trainingIdsForQs.join(",")
+          const existingProdQuestions = await pc.get(
+            `/api/v1/training_questions/?training__in=${trainingIdsStr}&limit=10000`
+          )
+          const existingQList = ensureArray(existingProdQuestions.data)
+          existingQUuids = new Set(existingQList.map(q => q.uuid))
+        }
+        console.log(`[Step 3] Found ${existingQUuids.size} existing questions on prod`)
+
+        // Only create new questions that don't exist
+        const newQPayload = trainingQuestions
+          .filter(q => !existingQUuids.has(q.uuid))
+          .map(q => {
+            const prodTrainingId = q.training ? trainingIdMap[q.training] : null
+            if (q.training && !prodTrainingId) {
+              console.warn(`[Step 3] Skipping question UUID ${q.uuid}: Training ID ${q.training} not found in production mapping.`)
+              return null
+            }
+            return {
+              uuid: q.uuid, index: q.index,
+              type: q.type, question_statement: q.question_statement,
+              options: q.options, answers: q.answers, hints: q.hints,
+              bloom_level: q.bloom_level,
+              statement_media_asset: q.statement_media_asset_id
+                ? (assetIdMap[q.statement_media_asset_id] ?? null)
+                : null,
+              is_active: true, status: "OnProd",
+              training: prodTrainingId,
+              grand_quiz: null,
+            }
+          })
+          .filter((q): q is Exclude<typeof q, null> => q !== null)
+
+        if (newQPayload.length > 0) {
+          console.log(`[Step 3] Posting ${newQPayload.length} new questions to prod...`)
+          await pc.post("/api/v1/internal/training_question/", newQPayload)
+          console.log(`[Step 3] Successfully uploaded ${newQPayload.length} training questions`)
+        } else {
+          console.log(`[Step 3] All questions already exist on prod or were skipped - skipping POST`)
+        }
+      } else {
+        console.log(`[Step 3] No training questions to upload - skipping`)
       }
       setStep(3, "done")
 
@@ -175,16 +281,37 @@ export default function ReviewUpload() {
       const grandQuizzes = stagingGqsForAssets
       let gqIdMap: Record<number, number> = {}
       if (grandQuizzes.length > 0) {
-        const gqPayload = grandQuizzes.map(gq => ({
-          uuid: gq.uuid, title: gq.title, description: gq.description,
-          instructions: gq.instructions, type: gq.type, level: gq.level,
-          is_active: true, status: "OnProd",
-        }))
-        const prodGqRes = await pc.post<{ id: number; uuid: string }[]>(
-          "/api/v1/internal/grand_quizzes/", gqPayload
+        // Check which grand quizzes already exist (scoped to this level)
+        const existingProdGqs = await pc.get(
+          `/api/v1/grand_quizzes/?level=${selectedLevel?.id}&limit=1000`
         )
+        const existingGqsList = ensureArray(existingProdGqs.data)
+        const existingGqUuids = new Set(existingGqsList.map(gq => gq.uuid))
+        console.log(`[Step 4] Found ${existingGqUuids.size} existing grand quizzes on prod`)
+
+        // Only create new grand quizzes that don't exist
+        const newGqPayload = grandQuizzes
+          .filter(gq => !existingGqUuids.has(gq.uuid))
+          .map(gq => ({
+            uuid: gq.uuid, title: gq.title, description: gq.description,
+            instructions: gq.instructions, type: gq.type, level: gq.level,
+            is_active: true, status: "OnProd",
+          }))
+
+        if (newGqPayload.length > 0) {
+          console.log(`[Step 4] Posting ${newGqPayload.length} new grand quizzes to prod...`)
+          await pc.post("/api/v1/internal/grand_quizzes/", newGqPayload)
+        } else {
+          console.log(`[Step 4] All grand quizzes already exist on prod - skipping POST`)
+        }
+
+        // Fetch all grand quizzes from prod to build ID map (scoped to this level)
+        const prodGqRes = await pc.get(
+          `/api/v1/grand_quizzes/?level=${selectedLevel?.id}&limit=1000`
+        )
+        const prodGqList = ensureArray(prodGqRes.data)
         const stagingGqByUuid = Object.fromEntries(grandQuizzes.map(gq => [gq.uuid, gq.id]))
-        const prodGqByUuid = Object.fromEntries(prodGqRes.data.map(gq => [gq.uuid, gq.id]))
+        const prodGqByUuid = Object.fromEntries(prodGqList.map(gq => [gq.uuid, gq.id]))
         for (const [uuid, stagingId] of Object.entries(stagingGqByUuid)) {
           if (prodGqByUuid[uuid]) gqIdMap[stagingId] = prodGqByUuid[uuid]
         }
@@ -194,20 +321,57 @@ export default function ReviewUpload() {
       // ── Step 5: Upload grand quiz questions ──────────────────────────
       setStep(5, "pending")
       const gqQuestions = stagingGqQuestionsForAssets
+      console.log(`[Step 5] Found ${gqQuestions.length} grand quiz questions to upload`)
+
       if (gqQuestions.length > 0) {
-        const gqQPayload = gqQuestions.map(q => ({
-          uuid: q.uuid, index: q.index,
-          type: q.type, question_statement: q.question_statement,
-          options: q.options, answers: q.answers, hints: q.hints,
-          bloom_level: q.bloom_level,
-          statement_media_asset: q.statement_media_asset_id
-            ? (assetIdMap[q.statement_media_asset_id] ?? null)
-            : null,
-          is_active: true, status: "OnProd",
-          training: null,
-          grand_quiz: q.grand_quiz ? (gqIdMap[q.grand_quiz] ?? null) : null,
-        }))
-        await pc.post("/api/v1/internal/training_question/", gqQPayload)
+        // Get grand quiz IDs for scoped query (for this level's grand quizzes)
+        const gqIdsForQs = Object.values(gqIdMap)
+
+        // Check which grand quiz questions already exist (scoped to level grand quizzes)
+        let existingGqQUuids = new Set<string>()
+        if (gqIdsForQs.length > 0) {
+          const gqIdsStr = gqIdsForQs.join(",")
+          const existingProdGqQuestions = await pc.get(
+            `/api/v1/training_questions/?grand_quiz__in=${gqIdsStr}&limit=10000`
+          )
+          const existingGqQList = ensureArray(existingProdGqQuestions.data)
+          existingGqQUuids = new Set(existingGqQList.map(q => q.uuid))
+        }
+        console.log(`[Step 5] Found ${existingGqQUuids.size} existing grand quiz questions on prod`)
+
+        // Only create new grand quiz questions that don't exist
+        const newGqQPayload = gqQuestions
+          .filter(q => !existingGqQUuids.has(q.uuid))
+          .map(q => {
+            const prodGrandQuizId = q.grand_quiz ? gqIdMap[q.grand_quiz] : null
+            if (q.grand_quiz && !prodGrandQuizId) {
+              console.warn(`[Step 5] Skipping question UUID ${q.uuid}: Grand Quiz ID ${q.grand_quiz} not found in production mapping.`)
+              return null
+            }
+            return {
+              uuid: q.uuid, index: q.index,
+              type: q.type, question_statement: q.question_statement,
+              options: q.options, answers: q.answers, hints: q.hints,
+              bloom_level: q.bloom_level,
+              statement_media_asset: q.statement_media_asset_id
+                ? (assetIdMap[q.statement_media_asset_id] ?? null)
+                : null,
+              is_active: true, status: "OnProd",
+              training: null,
+              grand_quiz: prodGrandQuizId,
+            }
+          })
+          .filter((q): q is Exclude<typeof q, null> => q !== null)
+
+        if (newGqQPayload.length > 0) {
+          console.log(`[Step 5] Posting ${newGqQPayload.length} new grand quiz questions to prod...`)
+          await pc.post("/api/v1/internal/training_question/", newGqQPayload)
+          console.log(`[Step 5] Successfully uploaded ${newGqQPayload.length} grand quiz questions`)
+        } else {
+          console.log(`[Step 5] All grand quiz questions already exist on prod or were skipped - skipping POST`)
+        }
+      } else {
+        console.log(`[Step 5] No grand quiz questions to upload - skipping`)
       }
       setStep(5, "done")
 
