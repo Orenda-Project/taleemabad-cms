@@ -1,0 +1,206 @@
+[
+  {
+    "type": "mcq",
+    "question_statement": "A teacher teaches science, math, and technology as completely separate subjects without connecting them. What is missing in this approach?",
+    "options": [
+      "Student discipline",
+      "Cross-curricular learning",
+      "Use of technology",
+      "Assessment methods"
+    ],
+    "answers": [2],
+    "hints": [
+      "Discipline is not the issue here.",
+      "STEM/STEAM requires connecting subjects.",
+      "Technology alone does not solve the issue.",
+      "Assessment is not the main concern."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 1
+  },
+  {
+    "type": "mcq",
+    "question_statement": "Which of the following BEST describes STEM learning?",
+    "options": [
+      "Learning subjects separately",
+      "Memorizing concepts",
+      "Applying multiple subjects together to solve problems",
+      "Using only technology"
+    ],
+    "answers": [3],
+    "hints": [
+      "STEM integrates subjects.",
+      "Memorization is not the focus.",
+      "STEM focuses on applying knowledge.",
+      "Technology is only one part."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 2
+  },
+  {
+    "type": "mcq",
+    "question_statement": "What is the key addition in STEAM compared to STEM?",
+    "options": [
+      "More content",
+      "Technology",
+      "Arts (creativity and design)",
+      "Assessment"
+    ],
+    "answers": [3],
+    "hints": [
+      "The addition is not just more content.",
+      "Technology is already part of STEM.",
+      "STEAM adds Arts for creativity and design thinking.",
+      "Assessment is not the addition."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 3
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher asks students to design a model house and present their idea creatively. This is an example of:",
+    "options": [
+      "STEM only",
+      "STEAM learning",
+      "Passive learning",
+      "Assessment only"
+    ],
+    "answers": [2],
+    "hints": [
+      "Missing creativity component.",
+      "Includes design and presentation (STEAM).",
+      "Not passive.",
+      "Not only assessment."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 4
+  },
+  {
+    "type": "mcq",
+    "question_statement": "In the Forces and Motion simulation, students test how different forces affect movement. What type of learning is this?",
+    "options": [
+      "Memorization",
+      "Observation only",
+      "Experimentation and application",
+      "Lecture-based learning"
+    ],
+    "answers": [3],
+    "hints": [
+      "This is not just memorization.",
+      "This goes beyond observation.",
+      "Testing and experimenting with forces reflects active experimentation and application.",
+      "This is not passive lecture-based learning."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 5
+  },
+  {
+    "type": "mcq",
+    "question_statement": "What is the role of the teacher in a STEM/STEAM-based GBTLA lesson?",
+    "options": [
+      "Deliver all information",
+      "Allow students to work without guidance",
+      "Facilitate, guide, and support student thinking",
+      "Focus only on assessment"
+    ],
+    "answers": [3],
+    "hints": [
+      "Traditional information delivery limits creativity.",
+      "Students need guidance, not complete independence.",
+      "Teachers facilitate and support student-centered learning.",
+      "Assessment is not the only focus."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 6
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which of the following reflect how GBTLA supports STEM/STEAM learning? (Select all that apply)",
+    "options": [
+      "Students solve problems through challenges",
+      "Students apply concepts in activities",
+      "Students only listen to explanations",
+      "Students experiment and test ideas",
+      "Students design solutions creatively"
+    ],
+    "answers": [1, 2, 4, 5],
+    "hints": [
+      "Problem-solving is core to GBTLA.",
+      "Application is essential.",
+      "Passive learning is not GBTLA.",
+      "Experimentation supports STEM/STEAM.",
+      "Creativity is the Art in STEAM."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 7
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which actions promote creativity and innovation in GBTLA? (Select all that apply)",
+    "options": [
+      "Asking students to design solutions",
+      "Encouraging explanation and presentation",
+      "Focusing only on correct answers",
+      "Allowing students to test ideas",
+      "Asking students to memorize definitions"
+    ],
+    "answers": [1, 2, 4],
+    "hints": [
+      "Design thinking promotes creativity.",
+      "Expression builds creativity.",
+      "Limiting to correct answers reduces creativity.",
+      "Encourages experimentation and innovation.",
+      "Memorization is passive."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 8
+  },
+  {
+    "type": "msq",
+    "question_statement": "A teacher wants to implement STEM/STEAM using GBTLA. Which actions are appropriate? (Select all that apply)",
+    "options": [
+      "Use real-world problem-based activities",
+      "Keep subjects completely separate",
+      "Encourage experimentation and discussion",
+      "Use simulations and interactive tools",
+      "Focus only on textbook explanations"
+    ],
+    "answers": [1, 3, 4],
+    "hints": [
+      "Real-world problems engage students.",
+      "This is opposite to STEM/STEAM principles.",
+      "Discussion and experimentation are core.",
+      "Tools enhance interactive learning.",
+      "Textbooks alone are not aligned with GBTLA."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 9
+  }
+]

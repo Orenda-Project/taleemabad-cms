@@ -1,0 +1,230 @@
+[
+  {
+    "type": "mcq",
+    "question_statement": "A teacher notices that only a few students are participating while others remain passive. Which approach is most aligned with GBTLA?",
+    "options": [
+      "Continue explanation to complete syllabus",
+      "Introduce structured game-based activity",
+      "Give written notes",
+      "Ask students to study at home"
+    ],
+    "answers": [2],
+    "hints": [
+      "Continuing explanation does not address low participation and keeps learning passive.",
+      "Game-based activities increase participation by involving all students actively.",
+      "Notes promote passive learning, not engagement.",
+      "This does not solve classroom engagement issues."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 1
+  },
+  {
+    "type": "mcq",
+    "question_statement": "What is the main reason game elements improve classroom behaviour?",
+    "options": [
+      "They reduce syllabus content",
+      "They create structured and engaging learning experiences",
+      "They make lessons shorter",
+      "They remove the need for teachers"
+    ],
+    "answers": [2],
+    "hints": [
+      "Games do not reduce curriculum content.",
+      "Structure, interaction, and engagement help guide behaviour.",
+      "Lesson length is not the main factor.",
+      "Teachers remain essential."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 2
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher introduces a challenge where students must complete tasks within a time limit. What is the main benefit?",
+    "options": [
+      "Reduces workload",
+      "Increases competition only",
+      "Helps maintain focus and attention",
+      "Eliminates discussion"
+    ],
+    "answers": [3],
+    "hints": [
+      "Time-bound tasks are not about workload reduction.",
+      "Competition may occur, but focus is the key benefit.",
+      "Time limits keep students focused and engaged.",
+      "Discussion should still be encouraged."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 3
+  },
+  {
+    "type": "mcq",
+    "question_statement": "During a group-based activity, students help each other solve problems. This is an example of:",
+    "options": [
+      "Passive learning",
+      "Collaboration",
+      "Individual learning",
+      "Testing"
+    ],
+    "answers": [2],
+    "hints": [
+      "Students are actively involved.",
+      "Working together reflects collaboration.",
+      "This is not individual work.",
+      "This is learning, not testing."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 4
+  },
+  {
+    "type": "mcq",
+    "question_statement": "Which classroom strategy BEST supports participation in GBTLA?",
+    "options": [
+      "Teacher explains entire lesson",
+      "Students listen quietly",
+      "Assigning roles within activities",
+      "Giving homework"
+    ],
+    "answers": [3],
+    "hints": [
+      "Teacher-centered approach limits participation.",
+      "Passive behaviour reduces engagement.",
+      "Roles ensure all students are involved.",
+      "Homework does not ensure in-class participation."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 5
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher observes that students are off-task during an activity. What is the best response?",
+    "options": [
+      "Stop the activity",
+      "Ignore behaviour",
+      "Introduce structure and clear rules",
+      "Move to next topic"
+    ],
+    "answers": [3],
+    "hints": [
+      "The activity can be improved instead of stopped.",
+      "Ignoring behaviour worsens the issue.",
+      "Structure helps guide behaviour.",
+      "This avoids the problem."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 6
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which game elements support student engagement? (Select all that apply)",
+    "options": [
+      "Challenges",
+      "Progress tracking",
+      "Immediate feedback",
+      "Memorization",
+      "Collaboration"
+    ],
+    "answers": [1, 2, 3, 5],
+    "hints": [
+      "Challenges motivate participation.",
+      "Progress gives direction.",
+      "Feedback helps improvement.",
+      "Memorization alone is passive.",
+      "Collaboration increases engagement."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 7
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which practices support positive classroom behaviour in GBTLA? (Select all that apply)",
+    "options": [
+      "Clear rules",
+      "Time-bound tasks",
+      "Turn-based interaction",
+      "Random participation",
+      "Individual work without teamwork"
+    ],
+    "answers": [1, 2, 3],
+    "hints": [
+      "Rules create structure.",
+      "Time limits maintain focus.",
+      "Organized participation improves behaviour.",
+      "Randomness reduces structure.",
+      "Teamwork improves responsibility and behaviour."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 8
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which strategies improve participation during activities? (Select all that apply)",
+    "options": [
+      "Assigning roles",
+      "Encouraging discussion",
+      "Ignoring quiet students",
+      "Recognizing effort",
+      "Allowing only top students to answer"
+    ],
+    "answers": [1, 2, 4],
+    "hints": [
+      "Roles ensure inclusion.",
+      "Discussion increases engagement.",
+      "All students must be included.",
+      "Recognition motivates students.",
+      "This limits participation."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 9
+  },
+  {
+    "type": "msq",
+    "question_statement": "A teacher wants to manage behaviour effectively using GBTLA. Which actions are appropriate? (Select all that apply)",
+    "options": [
+      "Set clear rules before activity",
+      "Focus only on winning",
+      "Encourage teamwork",
+      "Use structured activities",
+      "Ignore student interaction"
+    ],
+    "answers": [1, 3, 4],
+    "hints": [
+      "Rules guide behaviour.",
+      "Learning is the focus, not winning.",
+      "Teamwork improves engagement.",
+      "Structure supports management.",
+      "Interaction is essential."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 10
+  }
+]

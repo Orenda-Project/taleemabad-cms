@@ -1,0 +1,48 @@
+[
+  {
+    "type": "mcq",
+    "question_statement": "Question text here?",
+    "options": [
+      "Option A",
+      "Option B",
+      "Option C",
+      "Option D"
+    ],
+    "answers": [1],
+    "hints": [
+      "Hint for option A",
+      "Hint for option B",
+      "Hint for option C",
+      "Hint for option D"
+    ],
+    "bloom_level": "remember",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 1
+  },
+  {
+    "type": "msq",
+    "question_statement": "Question text here (Select all that apply)?",
+    "options": [
+      "Option A",
+      "Option B",
+      "Option C",
+      "Option D",
+      "Option E"
+    ],
+    "answers": [1, 3, 5],
+    "hints": [
+      "Hint for option A",
+      "Hint for option B",
+      "Hint for option C",
+      "Hint for option D",
+      "Hint for option E"
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 2
+  }
+]

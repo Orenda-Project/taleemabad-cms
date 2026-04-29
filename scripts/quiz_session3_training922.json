@@ -1,0 +1,230 @@
+[
+  {
+    "type": "mcq",
+    "question_statement": "A teacher believes that game-based learning can only be implemented using digital tools. What is the issue with this understanding?",
+    "options": [
+      "It limits student participation",
+      "It ignores offline learning opportunities",
+      "It increases teacher workload",
+      "It reduces assessment options"
+    ],
+    "answers": [2],
+    "hints": [
+      "Participation can still happen in digital settings; the main issue is misunderstanding the flexibility of GBTLA.",
+      "GBTLA includes powerful offline approaches such as board, card, and paper-based games.",
+      "Workload is not the central issue here.",
+      "Assessment can still be conducted in multiple ways."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 1
+  },
+  {
+    "type": "mcq",
+    "question_statement": "Which classroom activity BEST represents offline game-based learning?",
+    "options": [
+      "Students watch a video and take notes",
+      "Students solve problems using an online quiz",
+      "Students use cards to match terms with definitions",
+      "Teacher explains concepts on the board"
+    ],
+    "answers": [3],
+    "hints": [
+      "This is passive learning, not game-based.",
+      "This is digital, not offline.",
+      "Card matching is a strong offline game that promotes active learning.",
+      "This is teacher-centered instruction."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 2
+  },
+  {
+    "type": "mcq",
+    "question_statement": "Why are offline games effective in learning?",
+    "options": [
+      "They reduce lesson time",
+      "They replace teaching",
+      "They simplify assessment",
+      "They promote interaction, discussion, and problem-solving"
+    ],
+    "answers": [4],
+    "hints": [
+      "The goal is not to save time but to improve learning quality.",
+      "Games support teaching, they do not replace it.",
+      "Assessment is separate from the main purpose of games.",
+      "Interaction and problem-solving are key to active learning."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 3
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher uses a board game in class but students only move pieces without discussing answers. What should the teacher do?",
+    "options": [
+      "Stop the activity",
+      "Focus only on correct answers",
+      "Encourage discussion and explanation",
+      "Allow the game to continue"
+    ],
+    "answers": [3],
+    "hints": [
+      "The activity should be improved, not stopped.",
+      "Correct answers alone do not ensure understanding.",
+      "Discussion helps students explain reasoning and deepen learning.",
+      "Without discussion, learning remains superficial."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 4
+  },
+  {
+    "type": "mcq",
+    "question_statement": "Which of the following is an example of a paper-based game?",
+    "options": [
+      "Matching cards",
+      "Math Bingo",
+      "Snakes and Ladders",
+      "Role play"
+    ],
+    "answers": [2],
+    "hints": [
+      "This is a card-based activity.",
+      "Bingo is a classic paper-based learning game.",
+      "This is a board game.",
+      "This is an activity, not a structured paper-based game."
+    ],
+    "bloom_level": "remember",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 5
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher wants students to understand a process (e.g., water cycle). Which offline game is most suitable?",
+    "options": [
+      "Sequencing cards",
+      "Bingo",
+      "Matching cards",
+      "Quiz competition"
+    ],
+    "answers": [1],
+    "hints": [
+      "Sequencing helps students understand steps in order.",
+      "Bingo focuses on recall, not processes.",
+      "Matching focuses on relationships, not sequence.",
+      "This is better for review than conceptual understanding."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 6
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which of the following are types of offline classroom games? (Select all that apply)",
+    "options": [
+      "Board games",
+      "Card games",
+      "Paper-based games",
+      "Online simulations",
+      "Video lectures"
+    ],
+    "answers": [1, 2, 3],
+    "hints": [
+      "Board games support structured learning and movement.",
+      "Card games support matching and sequencing.",
+      "Paper-based games include bingo and sorting tasks.",
+      "This is digital, not offline.",
+      "This is not game-based learning."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 7
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which features describe effective use of board games in learning? (Select all that apply)",
+    "options": [
+      "Students move by solving questions",
+      "Students collaborate and discuss answers",
+      "Students move randomly without thinking",
+      "Students engage with lesson concepts",
+      "Students memorize without interaction"
+    ],
+    "answers": [1, 2, 4],
+    "hints": [
+      "Movement should be linked to learning tasks.",
+      "Collaboration strengthens understanding.",
+      "Random movement removes learning value.",
+      "Activities must connect to lesson concepts.",
+      "Memorization alone is not active learning."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 8
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which activities reflect effective use of card and paper-based games? (Select all that apply)",
+    "options": [
+      "Matching vocabulary with definitions",
+      "Sequencing steps of a process",
+      "Listening to teacher explanation only",
+      "Sorting concepts into categories",
+      "Copying notes"
+    ],
+    "answers": [1, 2, 4],
+    "hints": [
+      "Matching builds conceptual connections.",
+      "Sequencing supports understanding of processes.",
+      "This is passive learning.",
+      "Sorting develops analytical thinking.",
+      "Copying notes is not game-based learning."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 9
+  },
+  {
+    "type": "msq",
+    "question_statement": "A teacher wants to implement offline games effectively. Which actions are appropriate? (Select all that apply)",
+    "options": [
+      "Align the game with learning outcomes",
+      "Focus only on winning the game",
+      "Encourage discussion and reasoning",
+      "Use games as integrated part of lesson plan",
+      "Use games to reinforce curriculum concepts"
+    ],
+    "answers": [1, 3, 4, 5],
+    "hints": [
+      "Alignment ensures meaningful learning.",
+      "The goal is learning, not winning.",
+      "Discussion deepens understanding.",
+      "Games should be part of the lesson, not separate.",
+      "Games reinforce and strengthen concepts."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 10
+  }
+]

@@ -1,0 +1,230 @@
+[
+  {
+    "type": "mcq",
+    "question_statement": "In GBTLA, when does assessment take place?",
+    "options": [
+      "Only at the end of the lesson",
+      "Before teaching begins",
+      "Throughout the learning process",
+      "Only during tests"
+    ],
+    "answers": [3],
+    "hints": [
+      "In GBTLA, assessment is not limited to the end of the lesson. Limiting assessment to the end prevents teachers from identifying learning gaps during the lesson.",
+      "Assessment may begin early, but it is not restricted to the beginning. It continues throughout the lesson.",
+      "GBTLA integrates assessment into the entire learning process, during activities, through feedback, and at the end, allowing continuous monitoring of learning.",
+      "Tests are only one form of assessment. GBTLA emphasizes ongoing observation and feedback, not just formal testing."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 1
+  },
+  {
+    "type": "mcq",
+    "question_statement": "During a game activity, a teacher listens to student discussions and observes how they solve problems. This is an example of:",
+    "options": [
+      "Summative assessment",
+      "Formative assessment",
+      "Final evaluation",
+      "Testing"
+    ],
+    "answers": [2],
+    "hints": [
+      "Summative assessment occurs after learning, not during the activity.",
+      "Observing students during learning helps the teacher understand thinking and provide support — this is formative assessment.",
+      "Final evaluation happens at the end, not during the activity.",
+      "Testing is structured assessment, while this is observation-based assessment."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 2
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A student selects a wrong answer in a game and the game slows down their progress. What is this an example of?",
+    "options": [
+      "Punishment",
+      "Delayed feedback",
+      "Immediate feedback",
+      "Assessment only"
+    ],
+    "answers": [3],
+    "hints": [
+      "The purpose is not to punish, but to guide learning.",
+      "The feedback is immediate, not delayed.",
+      "The game provides instant feedback, allowing the student to recognize mistakes and adjust thinking immediately.",
+      "This is not just assessment — it actively supports learning."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 3
+  },
+  {
+    "type": "mcq",
+    "question_statement": "What is the main purpose of using Google Form quizzes in GBTLA?",
+    "options": [
+      "To replace classroom teaching",
+      "To provide entertainment",
+      "To evaluate student understanding after the lesson",
+      "To increase homework"
+    ],
+    "answers": [3],
+    "hints": [
+      "Google Forms support assessment but do not replace teaching.",
+      "These quizzes are not designed for entertainment, but for evaluation.",
+      "Google Forms are used as summative assessment tools to check whether students have achieved learning outcomes.",
+      "While they may be completed at home or class, their purpose is evaluation, not workload."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 4
+  },
+  {
+    "type": "mcq",
+    "question_statement": "Which of the following BEST describes formative assessment?",
+    "options": [
+      "It happens only after the lesson",
+      "It measures final performance",
+      "It happens during learning and guides instruction",
+      "It replaces teaching"
+    ],
+    "answers": [3],
+    "hints": [
+      "That describes summative assessment.",
+      "Measuring final performance is not formative assessment.",
+      "Formative assessment happens during the lesson and helps the teacher adjust instruction based on student understanding.",
+      "It supports teaching, not replaces it."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 5
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher notices student making repeated mistakes during a game and immediately guides them. What is the main benefit of this approach?",
+    "options": [
+      "Saves time",
+      "Improves classroom discipline",
+      "Supports learning in real time",
+      "Reduces workload"
+    ],
+    "answers": [3],
+    "hints": [
+      "Time-saving is not the main objective here.",
+      "Discipline may improve, but that is not the core purpose.",
+      "Immediate guidance helps students correct mistakes during learning, which strengthens understanding.",
+      "This approach may actually require more active teaching."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 6
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which of the following are levels of assessment in GBTLA? (Select all that apply)",
+    "options": [
+      "Formative assessment during activities",
+      "Feedback through games",
+      "Summative assessment at the end",
+      "Homework grading only",
+      "Final exams only"
+    ],
+    "answers": [1, 2, 3],
+    "hints": [
+      "Teachers observe and assess students during activities.",
+      "Games provide immediate feedback that supports assessment.",
+      "End-of-lesson quizzes help evaluate outcomes.",
+      "Homework alone does not represent the GBTLA assessment structure.",
+      "Final exams are not the primary focus in GBTLA."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 7
+  },
+  {
+    "type": "msq",
+    "question_statement": "How do games provide effective feedback? (Select all that apply)",
+    "options": [
+      "By showing correct or incorrect responses immediately",
+      "By allowing students to adjust their answers",
+      "By delaying results until the end",
+      "By slowing progress when answers are incorrect",
+      "By removing students from the activity"
+    ],
+    "answers": [1, 2, 4],
+    "hints": [
+      "Immediate response helps students recognize correctness instantly.",
+      "Students can rethink and improve their answers.",
+      "Delayed feedback reduces learning effectiveness.",
+      "Slowing progress signals incorrect understanding.",
+      "Students are not removed; they are supported to improve."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 8
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which statements describe the use of Google Forms in GBTLA? (Select all that apply)",
+    "options": [
+      "They are linked to lesson plans on LMS",
+      "Teachers must create them from scratch",
+      "They provide quick assessment of understanding",
+      "Responses are recorded automatically",
+      "They are only used for homework"
+    ],
+    "answers": [1, 3, 4],
+    "hints": [
+      "Forms are provided within LMS for each lesson.",
+      "Teachers are not required to create them independently.",
+      "They help quickly assess learning outcomes.",
+      "Responses are automatically collected and stored.",
+      "They are used for assessment, not limited to homework."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 9
+  },
+  {
+    "type": "msq",
+    "question_statement": "A teacher is implementing assessment effectively in a GBTLA lesson. Which actions are appropriate? (Select all that apply)",
+    "options": [
+      "Observing student participation during activities",
+      "Using game feedback to identify mistakes",
+      "Waiting until the end to assess learning",
+      "Using Google Form quizzes after the lesson",
+      "Attentively listen to the student responses during activities"
+    ],
+    "answers": [1, 2, 4, 5],
+    "hints": [
+      "Observation is key to formative assessment.",
+      "Game feedback helps identify misconceptions.",
+      "Assessment should not be delayed until the end.",
+      "Summative assessment confirms learning outcomes.",
+      "Student responses provides the learning insight."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 10
+  }
+]
