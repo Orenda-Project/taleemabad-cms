@@ -651,10 +651,10 @@ export default function ReviewUpload() {
                       <Button
                         size="sm"
                         onClick={() => uploadToProd(course)}
-                        disabled={!!uploading || course.status === "OnProd"}
+                        disabled={!!uploading}
                         variant={course.status === "ReadyForReview" ? "default" : "outline"}
                       >
-                        {course.status === "OnProd" ? "Already on Prod" : "Upload to Prod"}
+                        {course.status === "OnProd" ? "Sync Changes to Prod" : "Upload to Prod"}
                       </Button>
                     )}
                   </td>
