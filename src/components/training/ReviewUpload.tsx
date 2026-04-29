@@ -135,20 +135,23 @@ export default function ReviewUpload() {
       }
 
       // Check if course with this UUID already exists
+      let prodCourseId: number | null = null
       try {
         const existingCourses = await pc.get(
           `/api/v1/courses/?uuid=${course.uuid}`
         )
         const coursesList = ensureArray(existingCourses.data)
         if (coursesList.length > 0) {
-          // Update existing course (using UUID in URL)
-          console.log(`[Step 1] Course already exists, updating...`)
-          await pc.patch(`/api/v1/internal/courses/${course.uuid}/`, coursePayload)
+          // Update existing course (using numeric ID in URL)
+          prodCourseId = coursesList[0].id
+          console.log(`[Step 1] Course already exists, updating... ID: ${prodCourseId}`)
+          await pc.patch(`/api/v1/internal/courses/${prodCourseId}/`, coursePayload)
           console.log(`[Step 1] Course updated: ${course.uuid}`)
         } else {
           // Create new course
           console.log(`[Step 1] Creating new course: ${course.title}`)
-          await pc.post("/api/v1/internal/courses/", coursePayload)
+          const createRes = await pc.post("/api/v1/internal/courses/", coursePayload)
+          prodCourseId = createRes.data?.id || coursePayload.id
           console.log(`[Step 1] Course created: ${course.uuid}`)
         }
       } catch (err) {
@@ -171,7 +174,7 @@ export default function ReviewUpload() {
       const existingUuids = new Set(existingTrainingsList.map(t => t.uuid))
       console.log(`[Step 2] Found ${existingUuids.size} existing trainings on prod`)
 
-      // Build map of prod trainings by UUID
+      // Build map of prod trainings by UUID (with numeric IDs)
       const prodTrainingByUuid = Object.fromEntries(
         existingTrainingsList.map(t => [t.uuid, t])
       )
@@ -181,9 +184,14 @@ export default function ReviewUpload() {
         trainings.map(t => [t.id, t.uuid])
       )
 
+      // Build ID map: UUID → numeric ID (for PATCH operations)
+      const trainingUuidToIdMap: Record<string, number> = Object.fromEntries(
+        existingTrainingsList.map(t => [t.uuid, t.id])
+      )
+
       // Separate into create vs update payloads
       const createTrainingPayload: any[] = []
-      const updateTrainingPayload: Array<{ uuid: string; payload: any }> = []
+      const updateTrainingPayload: Array<{ uuid: string; id?: number; payload: any }> = []
 
       for (const t of trainings) {
         const trainingPayload = {
@@ -201,8 +209,8 @@ export default function ReviewUpload() {
           const stagingTime = new Date((t as any).updated_at || 0).getTime()
           const prodTime = new Date((existingProdT as any).updated_at || 0).getTime()
           if (stagingTime > prodTime) {
-            console.log(`[Step 2] Training UUID ${t.uuid} changed on staging - will update on prod`)
-            updateTrainingPayload.push({ uuid: t.uuid, payload: trainingPayload })
+            console.log(`[Step 2] Training UUID ${t.uuid} changed on staging - will update on prod (ID: ${existingProdT.id})`)
+            updateTrainingPayload.push({ uuid: t.uuid, id: existingProdT.id, payload: trainingPayload })
           } else {
             console.log(`[Step 2] Training UUID ${t.uuid} already synced`)
           }
@@ -213,17 +221,22 @@ export default function ReviewUpload() {
 
       if (createTrainingPayload.length > 0) {
         console.log(`[Step 2] Creating ${createTrainingPayload.length} new trainings on prod...`)
-        await pc.post("/api/v1/internal/trainings/", createTrainingPayload)
+        const createRes = await pc.post("/api/v1/internal/trainings/", createTrainingPayload)
+        const createdTrainings = ensureArray(createRes.data)
+        for (const t of createdTrainings) {
+          if (t.uuid) trainingUuidToIdMap[t.uuid] = t.id
+        }
+        console.log(`[Step 2] Created trainings mapped: ${JSON.stringify(createdTrainings)}`)
       } else {
         console.log(`[Step 2] No new trainings to create`)
       }
 
       if (updateTrainingPayload.length > 0) {
         console.log(`[Step 2] Updating ${updateTrainingPayload.length} trainings on prod...`)
-        for (const { uuid, payload } of updateTrainingPayload) {
+        for (const { uuid, id, payload } of updateTrainingPayload) {
           try {
-            await pc.patch(`/api/v1/internal/trainings/${uuid}/`, payload)
-            console.log(`[Step 2] Updated training UUID ${uuid}`)
+            await pc.patch(`/api/v1/internal/trainings/${id}/`, payload)
+            console.log(`[Step 2] Updated training UUID ${uuid} (ID: ${id})`)
           } catch (err: any) {
             console.warn(`[Step 2] Failed to update training ${uuid}:`, err.message)
           }
@@ -241,15 +254,15 @@ export default function ReviewUpload() {
       console.log(`[Step 3] Found ${trainingQuestions.length} training questions to upload`)
 
       if (trainingQuestions.length > 0) {
-        // Get training UUIDs for scoped query (for this course's trainings)
-        const trainingUuidsForQs = Object.values(stagingTrainingUuidById)
+        // Build training ID list for filtered query (numeric IDs only)
+        const trainingIdsForQs = Object.values(trainingUuidToIdMap)
 
-        // Fetch existing prod questions (scoped to course trainings by UUID)
+        // Fetch existing prod questions (scoped by numeric training IDs)
         let existingProdQuestions: any[] = []
-        if (trainingUuidsForQs.length > 0) {
-          const trainingUuidsStr = trainingUuidsForQs.join(",")
+        if (trainingIdsForQs.length > 0) {
+          const trainingIdsStr = trainingIdsForQs.join(",")
           const response = await pc.get(
-            `/api/v1/training_questions/?training__uuid__in=${trainingUuidsStr}&limit=10000`
+            `/api/v1/training_questions/?training_ids=${trainingIdsStr}&limit=10000`
           )
           existingProdQuestions = ensureArray(response.data)
         }
@@ -262,7 +275,7 @@ export default function ReviewUpload() {
 
         // Separate into create vs update payloads
         const createQPayload: any[] = []
-        const updateQPayload: Array<{ uuid: string; payload: any }> = []
+        const updateQPayload: Array<{ uuid: string; id?: number; payload: any }> = []
 
         for (const q of trainingQuestions) {
           // Only sync questions that have a training relationship
@@ -277,6 +290,12 @@ export default function ReviewUpload() {
             continue
           }
 
+          const prodTrainingId = trainingUuidToIdMap[trainingUuid]
+          if (!prodTrainingId) {
+            console.warn(`[Step 3] Skipping question UUID ${q.uuid}: Training ID not found in map for UUID ${trainingUuid}.`)
+            continue
+          }
+
           const questionPayload = {
             uuid: q.uuid, index: q.index,
             type: q.type, question_statement: q.question_statement,
@@ -286,7 +305,7 @@ export default function ReviewUpload() {
               ? (assetIdMap[q.statement_media_asset_id] ?? null)
               : null,
             is_active: true, status: "OnProd",
-            training: trainingUuid,
+            training: prodTrainingId,
             grand_quiz: null,
           }
 
@@ -296,8 +315,8 @@ export default function ReviewUpload() {
             const stagingTime = new Date((q as any).updated_at || 0).getTime()
             const prodTime = new Date((existingProdQ as any).updated_at || 0).getTime()
             if (stagingTime > prodTime) {
-              console.log(`[Step 3] Question UUID ${q.uuid} changed on staging - will update on prod`)
-              updateQPayload.push({ uuid: q.uuid, payload: questionPayload })
+              console.log(`[Step 3] Question UUID ${q.uuid} changed on staging - will update on prod (ID: ${existingProdQ.id})`)
+              updateQPayload.push({ uuid: q.uuid, id: existingProdQ.id, payload: questionPayload })
             } else {
               console.log(`[Step 3] Question UUID ${q.uuid} already synced`)
             }
@@ -318,10 +337,10 @@ export default function ReviewUpload() {
         // PATCH updated questions
         if (updateQPayload.length > 0) {
           console.log(`[Step 3] Updating ${updateQPayload.length} questions on prod...`)
-          for (const { uuid, payload } of updateQPayload) {
+          for (const { uuid, id, payload } of updateQPayload) {
             try {
-              await pc.patch(`/api/v1/internal/training_question/${uuid}/`, payload)
-              console.log(`[Step 3] Updated question UUID ${uuid}`)
+              await pc.patch(`/api/v1/internal/training_question/${id}/`, payload)
+              console.log(`[Step 3] Updated question UUID ${uuid} (ID: ${id})`)
             } catch (err: any) {
               console.warn(`[Step 3] Failed to update question ${uuid}:`, err.message)
             }
@@ -353,14 +372,19 @@ export default function ReviewUpload() {
         const existingGqUuids = new Set(existingGqsList.map(gq => gq.uuid))
         console.log(`[Step 4] Found ${existingGqUuids.size} existing grand quizzes on prod`)
 
-        // Build map of prod grand quizzes by UUID
+        // Build map of prod grand quizzes by UUID (with numeric IDs)
         const prodGqByUuid = Object.fromEntries(
           existingGqsList.map(gq => [gq.uuid, gq])
         )
 
+        // Build ID map: UUID → numeric ID (for PATCH operations)
+        const gqUuidToIdMap: Record<string, number> = Object.fromEntries(
+          existingGqsList.map(gq => [gq.uuid, gq.id])
+        )
+
         // Separate into create vs update payloads
         const createGqPayload: any[] = []
-        const updateGqPayload: Array<{ uuid: string; payload: any }> = []
+        const updateGqPayload: Array<{ uuid: string; id?: number; payload: any }> = []
 
         for (const gq of grandQuizzes) {
           const gqPayload = {
@@ -375,8 +399,8 @@ export default function ReviewUpload() {
             const stagingTime = new Date((gq as any).updated_at || 0).getTime()
             const prodTime = new Date((existingProdGq as any).updated_at || 0).getTime()
             if (stagingTime > prodTime) {
-              console.log(`[Step 4] Grand Quiz UUID ${gq.uuid} changed on staging - will update on prod`)
-              updateGqPayload.push({ uuid: gq.uuid, payload: gqPayload })
+              console.log(`[Step 4] Grand Quiz UUID ${gq.uuid} changed on staging - will update on prod (ID: ${existingProdGq.id})`)
+              updateGqPayload.push({ uuid: gq.uuid, id: existingProdGq.id, payload: gqPayload })
             } else {
               console.log(`[Step 4] Grand Quiz UUID ${gq.uuid} already synced`)
             }
@@ -387,17 +411,22 @@ export default function ReviewUpload() {
 
         if (createGqPayload.length > 0) {
           console.log(`[Step 4] Creating ${createGqPayload.length} new grand quizzes on prod...`)
-          await pc.post("/api/v1/internal/grand_quizzes/", createGqPayload)
+          const createRes = await pc.post("/api/v1/internal/grand_quizzes/", createGqPayload)
+          const createdGqs = ensureArray(createRes.data)
+          for (const gq of createdGqs) {
+            if (gq.uuid) gqUuidToIdMap[gq.uuid] = gq.id
+          }
+          console.log(`[Step 4] Created grand quizzes mapped: ${JSON.stringify(createdGqs)}`)
         } else {
           console.log(`[Step 4] No new grand quizzes to create`)
         }
 
         if (updateGqPayload.length > 0) {
           console.log(`[Step 4] Updating ${updateGqPayload.length} grand quizzes on prod...`)
-          for (const { uuid, payload } of updateGqPayload) {
+          for (const { uuid, id, payload } of updateGqPayload) {
             try {
-              await pc.patch(`/api/v1/internal/grand_quizzes/${uuid}/`, payload)
-              console.log(`[Step 4] Updated grand quiz UUID ${uuid}`)
+              await pc.patch(`/api/v1/internal/grand_quizzes/${id}/`, payload)
+              console.log(`[Step 4] Updated grand quiz UUID ${uuid} (ID: ${id})`)
             } catch (err: any) {
               console.warn(`[Step 4] Failed to update grand quiz ${uuid}:`, err.message)
             }
@@ -415,15 +444,15 @@ export default function ReviewUpload() {
       console.log(`[Step 5] Found ${gqQuestions.length} grand quiz questions to upload`)
 
       if (gqQuestions.length > 0) {
-        // Get grand quiz UUIDs for scoped query (for this level's grand quizzes)
-        const gqUuidsForQs = Object.values(stagingGqUuidById)
+        // Build grand quiz ID list for filtered query (numeric IDs only)
+        const gqIdsForQs = Object.values(gqUuidToIdMap)
 
-        // Fetch existing prod grand quiz questions (scoped to level grand quizzes by UUID)
+        // Fetch existing prod grand quiz questions (scoped by numeric grand quiz IDs)
         let existingProdGqQuestions: any[] = []
-        if (gqUuidsForQs.length > 0) {
-          const gqUuidsStr = gqUuidsForQs.join(",")
+        if (gqIdsForQs.length > 0) {
+          const gqIdsStr = gqIdsForQs.join(",")
           const response = await pc.get(
-            `/api/v1/training_questions/?grand_quiz__uuid__in=${gqUuidsStr}&limit=10000`
+            `/api/v1/training_questions/?grand_quiz_ids=${gqIdsStr}&limit=10000`
           )
           existingProdGqQuestions = ensureArray(response.data)
         }
@@ -436,7 +465,7 @@ export default function ReviewUpload() {
 
         // Separate into create vs update payloads
         const createGqQPayload: any[] = []
-        const updateGqQPayload: Array<{ uuid: string; payload: any }> = []
+        const updateGqQPayload: Array<{ uuid: string; id?: number; payload: any }> = []
 
         for (const q of gqQuestions) {
           // Only sync questions that have a grand_quiz relationship
@@ -451,6 +480,12 @@ export default function ReviewUpload() {
             continue
           }
 
+          const prodGrandQuizId = gqUuidToIdMap[grandQuizUuid]
+          if (!prodGrandQuizId) {
+            console.warn(`[Step 5] Skipping question UUID ${q.uuid}: Grand Quiz ID not found in map for UUID ${grandQuizUuid}.`)
+            continue
+          }
+
           const questionPayload = {
             uuid: q.uuid, index: q.index,
             type: q.type, question_statement: q.question_statement,
@@ -461,7 +496,7 @@ export default function ReviewUpload() {
               : null,
             is_active: true, status: "OnProd",
             training: null,
-            grand_quiz: grandQuizUuid,
+            grand_quiz: prodGrandQuizId,
           }
 
           const existingProdGqQ = prodGqQByUuid[q.uuid]
@@ -470,8 +505,8 @@ export default function ReviewUpload() {
             const stagingTime = new Date((q as any).updated_at || 0).getTime()
             const prodTime = new Date((existingProdGqQ as any).updated_at || 0).getTime()
             if (stagingTime > prodTime) {
-              console.log(`[Step 5] Question UUID ${q.uuid} changed on staging - will update on prod`)
-              updateGqQPayload.push({ uuid: q.uuid, payload: questionPayload })
+              console.log(`[Step 5] Question UUID ${q.uuid} changed on staging - will update on prod (ID: ${existingProdGqQ.id})`)
+              updateGqQPayload.push({ uuid: q.uuid, id: existingProdGqQ.id, payload: questionPayload })
             } else {
               console.log(`[Step 5] Question UUID ${q.uuid} already synced`)
             }
@@ -492,10 +527,10 @@ export default function ReviewUpload() {
         // PATCH updated grand quiz questions
         if (updateGqQPayload.length > 0) {
           console.log(`[Step 5] Updating ${updateGqQPayload.length} grand quiz questions on prod...`)
-          for (const { uuid, payload } of updateGqQPayload) {
+          for (const { uuid, id, payload } of updateGqQPayload) {
             try {
-              await pc.patch(`/api/v1/internal/training_question/${uuid}/`, payload)
-              console.log(`[Step 5] Updated question UUID ${uuid}`)
+              await pc.patch(`/api/v1/internal/training_question/${id}/`, payload)
+              console.log(`[Step 5] Updated question UUID ${uuid} (ID: ${id})`)
             } catch (err: any) {
               console.warn(`[Step 5] Failed to update question ${uuid}:`, err.message)
             }
