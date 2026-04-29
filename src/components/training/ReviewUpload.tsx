@@ -287,8 +287,14 @@ export default function ReviewUpload() {
         const updateQPayload: Array<{ id: number; payload: any }> = []
 
         for (const q of trainingQuestions) {
-          const prodTrainingId = q.training ? trainingIdMap[q.training] : null
-          if (q.training && !prodTrainingId) {
+          // Only sync questions that have a training relationship
+          if (!q.training) {
+            console.warn(`[Step 3] Skipping question UUID ${q.uuid}: No training relationship on staging (orphaned question).`)
+            continue
+          }
+
+          const prodTrainingId = trainingIdMap[q.training]
+          if (!prodTrainingId) {
             console.warn(`[Step 3] Skipping question UUID ${q.uuid}: Training ID ${q.training} not found in production mapping.`)
             continue
           }
@@ -461,8 +467,14 @@ export default function ReviewUpload() {
         const updateGqQPayload: Array<{ id: number; payload: any }> = []
 
         for (const q of gqQuestions) {
-          const prodGrandQuizId = q.grand_quiz ? gqIdMap[q.grand_quiz] : null
-          if (q.grand_quiz && !prodGrandQuizId) {
+          // Only sync questions that have a grand_quiz relationship
+          if (!q.grand_quiz) {
+            console.warn(`[Step 5] Skipping question UUID ${q.uuid}: No grand_quiz relationship on staging (orphaned question).`)
+            continue
+          }
+
+          const prodGrandQuizId = gqIdMap[q.grand_quiz]
+          if (!prodGrandQuizId) {
             console.warn(`[Step 5] Skipping question UUID ${q.uuid}: Grand Quiz ID ${q.grand_quiz} not found in production mapping.`)
             continue
           }
