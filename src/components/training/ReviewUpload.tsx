@@ -127,65 +127,114 @@ export default function ReviewUpload() {
       setStep(1, "pending")
       console.log(`[Step 1] Syncing course: ${course.title}`)
 
-      // Fetch ALL prod courses upfront for batch comparison (not one-by-one)
-      const allProdCourses = await pc.get(
-        `/api/v1/courses/?limit=1000`
-      )
-      const allProdCoursesList = ensureArray(allProdCourses.data)
-      const prodCourseByUuid = Object.fromEntries(
-        allProdCoursesList.map(c => [c.uuid, c])
-      )
-      console.log(`[Step 1] Prod has ${allProdCoursesList.length} courses`)
+      // ── Step 1A: Fetch ALL prod courses ──
+      console.log(`[Step 1A] Fetching all prod courses: GET /api/v1/courses/?limit=1000`)
+      const prodCoursesResponse = await pc.get(`/api/v1/courses/?limit=1000`)
+      const allProdCourses = ensureArray(prodCoursesResponse.data)
+      console.log(`[Step 1A] Prod response: ${allProdCourses.length} courses found`)
+      allProdCourses.forEach(c => {
+        console.log(`  - Prod course: UUID=${c.uuid}, ID=${c.id}, title=${c.title}, updated_at=${c.updated_at}`)
+      })
 
-      const coursePayload = {
-        uuid: course.uuid, title: course.title, description: course.description,
-        keywords: course.keywords, time_duration: course.time_duration, index: course.index,
-        thumbnail_url: course.thumbnail_url, is_active: course.is_active ?? true, status: "OnProd",
-        type: course.type, level: course.level,
+      // Build prod UUID map for matching
+      const prodCourseByUuid = Object.fromEntries(
+        allProdCourses.map(c => [c.uuid, c])
+      )
+
+      // ── Step 1B: Get staging course data ──
+      console.log(`[Step 1B] Getting staging course data for comparison`)
+      const stagingCourse = course
+      console.log(`[Step 1B] Staging course: UUID=${stagingCourse.uuid}, ID=${stagingCourse.id}, title=${stagingCourse.title}, updated_at=${stagingCourse.updated_at}`)
+
+      // ── Step 1C: Match by UUID ──
+      console.log(`[Step 1C] Matching staging UUID=${stagingCourse.uuid} against prod courses...`)
+      const matchedProdCourse = prodCourseByUuid[stagingCourse.uuid]
+
+      if (matchedProdCourse) {
+        console.log(`[Step 1C] ✓ MATCH FOUND: Prod UUID=${matchedProdCourse.uuid} matches staging`)
+        console.log(`  Prod:   ID=${matchedProdCourse.id}, updated_at=${matchedProdCourse.updated_at}`)
+        console.log(`  Staging: ID=${stagingCourse.id}, updated_at=${stagingCourse.updated_at}`)
+      } else {
+        console.log(`[Step 1C] ✗ NO MATCH: Staging UUID=${stagingCourse.uuid} not found in prod`)
       }
 
-      // Check if course with this UUID already exists on prod
-      let prodCourseId: number | null = null
-      const existingProdCourse = prodCourseByUuid[course.uuid]
+      // ── Step 1D: Build sync payload ──
+      console.log(`[Step 1D] Building course sync payload`)
+      const coursePayload = {
+        uuid: stagingCourse.uuid,
+        title: stagingCourse.title,
+        description: stagingCourse.description,
+        keywords: stagingCourse.keywords,
+        time_duration: stagingCourse.time_duration,
+        index: stagingCourse.index,
+        thumbnail_url: stagingCourse.thumbnail_url,
+        is_active: stagingCourse.is_active ?? true,
+        status: "OnProd",
+        type: stagingCourse.type,
+        level: stagingCourse.level,
+      }
+      console.log(`[Step 1D] Payload prepared: ${JSON.stringify(coursePayload, null, 2)}`)
 
-      if (existingProdCourse) {
-        // Course exists — check if staging is newer before updating
-        const stagingTime = new Date((course as any).updated_at || 0).getTime()
-        const prodTime = new Date((existingProdCourse as any).updated_at || 0).getTime()
+      // ── Step 1E: Decide CREATE or UPDATE ──
+      console.log(`[Step 1E] Comparing timestamps to decide CREATE or UPDATE`)
+      let prodCourseId: number | null = null
+
+      if (matchedProdCourse) {
+        // Match found — check freshness
+        const stagingTime = new Date((stagingCourse as any).updated_at || 0).getTime()
+        const prodTime = new Date((matchedProdCourse as any).updated_at || 0).getTime()
+        console.log(`  Freshness check: stagingTime=${stagingTime}, prodTime=${prodTime}`)
 
         if (stagingTime > prodTime) {
           // Staging is newer → UPDATE
-          prodCourseId = existingProdCourse.id
-          console.log(`[Step 1] Course UUID ${course.uuid} changed on staging - updating on prod (ID: ${prodCourseId})`)
+          prodCourseId = matchedProdCourse.id
+          console.log(`  → Staging is NEWER (${stagingTime} > ${prodTime}): UPDATING prod`)
+          console.log(`[Step 1E] Sending: PATCH /api/v1/internal/courses/${prodCourseId}/ with payload`)
           await pc.patch(`/api/v1/internal/courses/${prodCourseId}/`, coursePayload)
-          console.log(`[Step 1] Course updated: ${course.uuid}`)
+          console.log(`[Step 1E] ✓ Course updated successfully (ID: ${prodCourseId})`)
         } else {
           // Prod is newer or equal → SKIP
-          prodCourseId = existingProdCourse.id
-          console.log(`[Step 1] Course UUID ${course.uuid} already synced, skipping update`)
+          prodCourseId = matchedProdCourse.id
+          console.log(`  → Prod is NEWER or EQUAL (${prodTime} >= ${stagingTime}): SKIPPING update`)
+          console.log(`[Step 1E] No update needed - prod version is current (ID: ${prodCourseId})`)
         }
       } else {
-        // Course doesn't exist on prod → CREATE
-        console.log(`[Step 1] Course UUID ${course.uuid} not found on prod - creating new`)
-        const createRes = await pc.post("/api/v1/internal/courses/", coursePayload)
+        // No match — CREATE new
+        console.log(`  → No match found: CREATING new course on prod`)
+        console.log(`[Step 1E] Sending: POST /api/v1/internal/courses/ with payload`)
+        const createRes = await pc.post(`/api/v1/internal/courses/`, coursePayload)
         prodCourseId = createRes.data?.id
-        console.log(`[Step 1] Course created: ${course.uuid} (ID: ${prodCourseId})`)
+        console.log(`[Step 1E] ✓ Course created successfully (ID: ${prodCourseId}, UUID: ${createRes.data?.uuid})`)
       }
 
       setStep(1, "done")
 
       // ── Step 2: Upload trainings ──────────────────────────────────────
       setStep(2, "pending")
-      const trainings = stagingTrainingsForAssets
-      console.log(`[Step 2] Found ${trainings.length} trainings to upload`)
 
-      // Check which trainings already exist (scoped to this course by UUID)
-      const existingProdTrainings = await pc.get(
+      // ── Step 2A: Fetch ALL prod trainings (for this course) ──
+      console.log(`[Step 2A] Fetching all prod trainings: GET /api/v1/trainings/?course__uuid=${course.uuid}&limit=1000`)
+      const prodTrainingsResponse = await pc.get(
         `/api/v1/trainings/?course__uuid=${course.uuid}&limit=1000`
       )
-      const existingTrainingsList = ensureArray(existingProdTrainings.data)
+      const existingProdTrainings = ensureArray(prodTrainingsResponse.data)
+      console.log(`[Step 2A] Prod response: ${existingProdTrainings.length} trainings found`)
+      existingProdTrainings.forEach(t => {
+        console.log(`  - Prod training: UUID=${t.uuid}, ID=${t.id}, title=${t.title}, updated_at=${t.updated_at}`)
+      })
+
+      // ── Step 2B: Get staging trainings ──
+      const trainings = stagingTrainingsForAssets
+      console.log(`[Step 2B] Staging trainings: ${trainings.length} found`)
+      trainings.forEach(t => {
+        console.log(`  - Staging training: UUID=${t.uuid}, ID=${t.id}, title=${t.title}, updated_at=${t.updated_at}`)
+      })
+
+      // ── Step 2C: Build prod UUID map ──
+      console.log(`[Step 2C] Building prod UUID map for matching`)
+      const existingTrainingsList = existingProdTrainings
       const existingUuids = new Set(existingTrainingsList.map(t => t.uuid))
-      console.log(`[Step 2] Found ${existingUuids.size} existing trainings on prod`)
+      console.log(`[Step 2C] Prod UUID map: ${existingUuids.size} UUIDs indexed`)
 
       // Build map of prod trainings by UUID (with numeric IDs)
       const prodTrainingByUuid = Object.fromEntries(
@@ -202,138 +251,182 @@ export default function ReviewUpload() {
         existingTrainingsList.map(t => [t.uuid, t.id])
       )
 
-      // Separate into create vs update payloads
+      // ── Step 2D: Match staging trainings against prod ──
+      console.log(`[Step 2D] Matching ${trainings.length} staging trainings against ${existingTrainingsList.length} prod trainings`)
       const createTrainingPayload: any[] = []
       const updateTrainingPayload: Array<{ uuid: string; id?: number; payload: any }> = []
 
-      for (const t of trainings) {
+      for (const stagingTraining of trainings) {
         const trainingPayload = {
-          uuid: t.uuid, title: t.title, description: t.description,
-          content: t.content, index: t.index, is_grand_assessment: t.is_grand_assessment,
+          uuid: stagingTraining.uuid,
+          title: stagingTraining.title,
+          description: stagingTraining.description,
+          content: stagingTraining.content,
+          index: stagingTraining.index,
+          is_grand_assessment: stagingTraining.is_grand_assessment,
           course: course.uuid,
-          is_active: t.is_active ?? true, status: "OnProd",
-          media_asset: t.media_asset?.id ? (assetIdMap[t.media_asset.id] ?? null) : null,
-          tags: t.tags ?? [],
+          is_active: stagingTraining.is_active ?? true,
+          status: "OnProd",
+          media_asset: stagingTraining.media_asset?.id ? (assetIdMap[stagingTraining.media_asset.id] ?? null) : null,
+          tags: stagingTraining.tags ?? [],
         }
 
-        const existingProdT = prodTrainingByUuid[t.uuid]
-        if (existingProdT) {
-          // Check if staging is newer
-          const stagingTime = new Date((t as any).updated_at || 0).getTime()
-          const prodTime = new Date((existingProdT as any).updated_at || 0).getTime()
+        // Look for matching prod training by UUID
+        const matchedProdTraining = prodTrainingByUuid[stagingTraining.uuid]
+
+        if (matchedProdTraining) {
+          // Match found — check freshness
+          console.log(`  ✓ MATCH: Staging UUID=${stagingTraining.uuid} found in prod (ID=${matchedProdTraining.id})`)
+          const stagingTime = new Date((stagingTraining as any).updated_at || 0).getTime()
+          const prodTime = new Date((matchedProdTraining as any).updated_at || 0).getTime()
+          console.log(`    Freshness: staging=${stagingTime}, prod=${prodTime}`)
+
           if (stagingTime > prodTime) {
-            console.log(`[Step 2] Training UUID ${t.uuid} changed on staging - will update on prod (ID: ${existingProdT.id})`)
-            updateTrainingPayload.push({ uuid: t.uuid, id: existingProdT.id, payload: trainingPayload })
+            console.log(`    → Staging NEWER: will UPDATE prod (ID=${matchedProdTraining.id})`)
+            updateTrainingPayload.push({ uuid: stagingTraining.uuid, id: matchedProdTraining.id, payload: trainingPayload })
           } else {
-            console.log(`[Step 2] Training UUID ${t.uuid} already synced`)
+            console.log(`    → Prod CURRENT: skipping update`)
           }
         } else {
+          // No match — will create
+          console.log(`  ✗ NO MATCH: Staging UUID=${stagingTraining.uuid} not in prod → will CREATE`)
           createTrainingPayload.push(trainingPayload)
         }
       }
 
+      // ── Step 2E: Create new trainings ──
       if (createTrainingPayload.length > 0) {
-        console.log(`[Step 2] Creating ${createTrainingPayload.length} new trainings on prod...`)
+        console.log(`[Step 2E] Creating trainings: POST /api/v1/internal/trainings/ with ${createTrainingPayload.length} payloads`)
+        createTrainingPayload.forEach((payload, idx) => {
+          console.log(`  Payload ${idx + 1}: UUID=${payload.uuid}, title=${payload.title}`)
+        })
         const createRes = await pc.post("/api/v1/internal/trainings/", createTrainingPayload)
         const createdTrainings = ensureArray(createRes.data)
+        console.log(`[Step 2E] Response: ${createdTrainings.length} trainings created`)
         for (const t of createdTrainings) {
           if (t.uuid) trainingUuidToIdMap[t.uuid] = t.id
+          console.log(`  Created: UUID=${t.uuid}, ID=${t.id}`)
         }
-        console.log(`[Step 2] Created trainings mapped: ${JSON.stringify(createdTrainings)}`)
       } else {
-        console.log(`[Step 2] No new trainings to create`)
+        console.log(`[Step 2E] No new trainings to create`)
       }
 
+      // ── Step 2F: Update existing trainings ──
       if (updateTrainingPayload.length > 0) {
-        console.log(`[Step 2] Updating ${updateTrainingPayload.length} trainings on prod...`)
+        console.log(`[Step 2F] Updating trainings: PATCH /api/v1/internal/trainings/{id}/ for ${updateTrainingPayload.length} trainings`)
         for (const { uuid, id, payload } of updateTrainingPayload) {
           try {
+            console.log(`  PATCH /api/v1/internal/trainings/${id}/ - UUID=${uuid}`)
             await pc.patch(`/api/v1/internal/trainings/${id}/`, payload)
-            console.log(`[Step 2] Updated training UUID ${uuid} (ID: ${id})`)
+            console.log(`    ✓ Success`)
           } catch (err: any) {
-            console.warn(`[Step 2] Failed to update training ${uuid}:`, err.message)
+            console.warn(`    ✗ Failed: ${err.message}`)
           }
         }
-        console.log(`[Step 2] Successfully updated ${updateTrainingPayload.length} trainings`)
       } else {
-        console.log(`[Step 2] No trainings to update`)
+        console.log(`[Step 2F] No trainings to update`)
       }
 
       setStep(2, "done")
 
       // ── Step 3: Upload training questions ────────────────────────────
       setStep(3, "pending")
+
+      // ── Step 3A: Fetch ALL prod training questions ──
+      console.log(`[Step 3A] Fetching prod training questions`)
+      let existingProdQuestions: any[] = []
+      const trainingIdsForQs = Object.values(trainingUuidToIdMap)
+      if (trainingIdsForQs.length > 0) {
+        const trainingIdsStr = trainingIdsForQs.join(",")
+        console.log(`[Step 3A] Fetching: GET /api/v1/training_questions/?training_ids=${trainingIdsStr}&limit=10000`)
+        const response = await pc.get(
+          `/api/v1/training_questions/?training_ids=${trainingIdsStr}&limit=10000`
+        )
+        existingProdQuestions = ensureArray(response.data)
+        console.log(`[Step 3A] Prod response: ${existingProdQuestions.length} questions found`)
+        existingProdQuestions.forEach(q => {
+          console.log(`  - Prod question: UUID=${q.uuid}, ID=${q.id}, training=${q.training}, updated_at=${q.updated_at}`)
+        })
+      }
+
+      // ── Step 3B: Get staging training questions ──
       const trainingQuestions = stagingQuestionsForAssets
-      console.log(`[Step 3] Found ${trainingQuestions.length} training questions to upload`)
+      console.log(`[Step 3B] Staging training questions: ${trainingQuestions.length} found`)
+      trainingQuestions.forEach(q => {
+        console.log(`  - Staging question: UUID=${q.uuid}, ID=${q.id}, training=${q.training}, updated_at=${q.updated_at}`)
+      })
 
       if (trainingQuestions.length > 0) {
-        // Build training ID list for filtered query (numeric IDs only)
-        const trainingIdsForQs = Object.values(trainingUuidToIdMap)
+        // ── Step 3C: Build prod UUID map ──
+        console.log(`[Step 3C] Building prod UUID map for matching`)
 
-        // Fetch existing prod questions (scoped by numeric training IDs)
-        let existingProdQuestions: any[] = []
-        if (trainingIdsForQs.length > 0) {
-          const trainingIdsStr = trainingIdsForQs.join(",")
-          const response = await pc.get(
-            `/api/v1/training_questions/?training_ids=${trainingIdsStr}&limit=10000`
-          )
-          existingProdQuestions = ensureArray(response.data)
-        }
-        console.log(`[Step 3] Found ${existingProdQuestions.length} existing questions on prod`)
-
-        // Build map of prod questions by UUID for comparison
+        // ── Step 3D: Build prod UUID map ──
         const prodQByUuid = Object.fromEntries(
           existingProdQuestions.map(q => [q.uuid, q])
         )
+        console.log(`[Step 3D] Prod UUID map built: ${Object.keys(prodQByUuid).length} questions indexed`)
 
-        // Separate into create vs update payloads
+        // ── Step 3E: Match staging questions against prod ──
+        console.log(`[Step 3E] Matching ${trainingQuestions.length} staging questions against prod`)
         const createQPayload: any[] = []
         const updateQPayload: Array<{ uuid: string; id?: number; payload: any }> = []
 
-        for (const q of trainingQuestions) {
+        for (const stagingQ of trainingQuestions) {
           // Only sync questions that have a training relationship
-          if (!q.training) {
-            console.warn(`[Step 3] Skipping question UUID ${q.uuid}: No training relationship on staging (orphaned question).`)
+          if (!stagingQ.training) {
+            console.warn(`[Step 3E] ✗ SKIP: Question UUID ${stagingQ.uuid} - no training relationship (orphaned)`)
             continue
           }
 
-          const trainingUuid = stagingTrainingUuidById[q.training]
+          const trainingUuid = stagingTrainingUuidById[stagingQ.training]
           if (!trainingUuid) {
-            console.warn(`[Step 3] Skipping question UUID ${q.uuid}: Training UUID not found for ID ${q.training}.`)
+            console.warn(`[Step 3E] ✗ SKIP: Question UUID ${stagingQ.uuid} - training ID ${stagingQ.training} not found`)
             continue
           }
 
           const prodTrainingId = trainingUuidToIdMap[trainingUuid]
           if (!prodTrainingId) {
-            console.warn(`[Step 3] Skipping question UUID ${q.uuid}: Training ID not found in map for UUID ${trainingUuid}.`)
+            console.warn(`[Step 3E] ✗ SKIP: Question UUID ${stagingQ.uuid} - training UUID ${trainingUuid} not in prod map`)
             continue
           }
 
           const questionPayload = {
-            uuid: q.uuid, index: q.index,
-            type: q.type, question_statement: q.question_statement,
-            options: q.options, answers: q.answers, hints: q.hints,
-            bloom_level: q.bloom_level,
-            statement_media_asset: q.statement_media_asset_id
-              ? (assetIdMap[q.statement_media_asset_id] ?? null)
+            uuid: stagingQ.uuid,
+            index: stagingQ.index,
+            type: stagingQ.type,
+            question_statement: stagingQ.question_statement,
+            options: stagingQ.options,
+            answers: stagingQ.answers,
+            hints: stagingQ.hints,
+            bloom_level: stagingQ.bloom_level,
+            statement_media_asset: stagingQ.statement_media_asset_id
+              ? (assetIdMap[stagingQ.statement_media_asset_id] ?? null)
               : null,
-            is_active: q.is_active ?? true, status: "OnProd",
+            is_active: stagingQ.is_active ?? true,
+            status: "OnProd",
             training: prodTrainingId,
             grand_quiz: null,
           }
 
-          const existingProdQ = prodQByUuid[q.uuid]
-          if (existingProdQ) {
-            // Check if staging is newer (updated_at comparison)
-            const stagingTime = new Date((q as any).updated_at || 0).getTime()
-            const prodTime = new Date((existingProdQ as any).updated_at || 0).getTime()
+          // Look for matching prod question by UUID
+          const matchedProdQ = prodQByUuid[stagingQ.uuid]
+
+          if (matchedProdQ) {
+            // Match found — check freshness
+            console.log(`  ✓ MATCH: Staging UUID=${stagingQ.uuid} found in prod (ID=${matchedProdQ.id})`)
+            const stagingTime = new Date((stagingQ as any).updated_at || 0).getTime()
+            const prodTime = new Date((matchedProdQ as any).updated_at || 0).getTime()
+            console.log(`    Freshness: staging=${stagingTime}, prod=${prodTime}`)
+
             if (stagingTime > prodTime) {
-              console.log(`[Step 3] Question UUID ${q.uuid} changed on staging - will update on prod (ID: ${existingProdQ.id})`)
-              updateQPayload.push({ uuid: q.uuid, id: existingProdQ.id, payload: questionPayload })
+              console.log(`    → Staging NEWER: will UPDATE prod (ID=${matchedProdQ.id})`)
+              updateQPayload.push({ uuid: stagingQ.uuid, id: matchedProdQ.id, payload: questionPayload })
             } else {
-              console.log(`[Step 3] Question UUID ${q.uuid} already synced`)
+              console.log(`    → Prod CURRENT: skipping update`)
             }
           } else {
+            // No match — will create
+            console.log(`  ✗ NO MATCH: Staging UUID=${stagingQ.uuid} not in prod → will CREATE (training ID=${prodTrainingId})`)
             createQPayload.push(questionPayload)
           }
         }
