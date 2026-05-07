@@ -89,11 +89,27 @@ export default function AssetForm({ asset, onSuccess, onCancel }: Props) {
     try {
       if (asset) await update.mutateAsync({ id: asset.id, data: payload })
       else await create.mutateAsync(payload)
-      toast({ title: asset ? "Asset updated" : "Asset created" })
+      toast({ title: asset ? "✓ Asset updated" : "✓ Asset created" })
       reset()
       onSuccess?.()
     } catch (err: any) {
-      toast({ title: "Error", description: err.response?.data?.message, variant: "destructive" })
+      let errorMsg = "Failed to save asset"
+
+      if (err.response?.status === 400) {
+        const data = err.response.data
+        if (data.url) errorMsg = `URL error: ${Array.isArray(data.url) ? data.url[0] : data.url}`
+        else if (data.name) errorMsg = `Name error: ${Array.isArray(data.name) ? data.name[0] : data.name}`
+        else if (data.uuid) errorMsg = `UUID error: ${Array.isArray(data.uuid) ? data.uuid[0] : data.uuid}`
+        else errorMsg = data.message || data.detail || JSON.stringify(data)
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        errorMsg = "Access denied. Check your API key."
+      } else if (err.response?.status === 409) {
+        errorMsg = "Asset already exists with this UUID or URL."
+      } else if (err.response?.status === 500) {
+        errorMsg = "Server error. Please try again later."
+      }
+
+      toast({ title: "✗ Save failed", description: errorMsg, variant: "destructive" })
     }
   }
 

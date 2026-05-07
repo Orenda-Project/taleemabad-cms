@@ -18,12 +18,57 @@ const PROMO_STEPS = [
   "Writing to prod DB",
 ]
 
+const S3_BUCKET_IN_REVIEW = "asset-manager-in-review"
+const S3_BUCKET_APPROVED = "asset-manager-approved"
+
+interface AssetWithOriginalUrl extends MediaAsset {
+  __originalUrl?: string
+}
+
+function getErrorMessage(error: any, stepIndex: number): string {
+  const stepNames = [
+    "prod URL fetch",
+    "file bucket move",
+    "stage record update",
+    "prod DB write",
+  ]
+  const stepName = stepNames[stepIndex] || "operation"
+
+  if (error.response?.status === 401 || error.response?.status === 403) {
+    return `Access denied during ${stepName}. Check API key permissions.`
+  }
+  if (error.response?.status === 404) {
+    return `Endpoint not found during ${stepName}. Backend may have changed.`
+  }
+  if (error.response?.status === 500) {
+    return `Server error during ${stepName}. Contact support.`
+  }
+  if (error.message === "Network Error") {
+    return `Network error during ${stepName}. Check connection.`
+  }
+  if (error.code === "ECONNABORTED") {
+    return `Timeout during ${stepName}. Server may be slow.`
+  }
+
+  const backendMsg = error.response?.data?.message || error.response?.data?.detail
+  return backendMsg || error.message || `Failed at ${stepName}`
+}
+
+function rewriteUrl(url: string, fromBucket: string, toBucket: string): string {
+  if (!url || !url.includes(fromBucket)) {
+    console.warn(`URL doesn't contain expected bucket "${fromBucket}":`, url)
+    return url
+  }
+  return url.replace(new RegExp(fromBucket, "g"), toBucket)
+}
+
 export default function AssetPromotion() {
   const { data: assets = [], isLoading } = useMediaAssets()
   const { selectedOrg } = useOrgStore()
   const { toast } = useToast()
   const qc = useQueryClient()
   const currentStepRef = useRef<number>(-1)
+  const rollbackFailedRef = useRef<boolean>(false)
 
   const readyAssets = assets.filter(a => a.status === "ReadyForReview")
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -49,14 +94,15 @@ export default function AssetPromotion() {
 
   async function promote() {
     if (!selectedOrg || selected.size === 0) return
-    const selectedAssets = readyAssets.filter(a => selected.has(a.id))
+    const selectedAssets: AssetWithOriginalUrl[] = readyAssets.filter(a => selected.has(a.id))
     const pc = prodClient(selectedOrg.prod_url)
     setUploading(true)
     setSteps({})
     currentStepRef.current = -1
+    rollbackFailedRef.current = false
 
     try {
-      // Step 1: fetch prod URLs
+      // Step 1: fetch prod URLs to see what exists
       setStep(0, "pending")
       const ids = selectedAssets.map(a => a.id).join(",")
       const prodAssets: MediaAsset[] = await pc.get(`/api/v1/media_assets/?id=${ids}`).then(r => r.data)
@@ -64,7 +110,12 @@ export default function AssetPromotion() {
       prodAssets.forEach(a => { prodUrlMap[a.id] = a.url })
       setStep(0, "done")
 
-      // Step 2: move files (only for assets with changed/new URLs)
+      // Store original URLs for safe rollback
+      selectedAssets.forEach(a => {
+        a.__originalUrl = a.url
+      })
+
+      // Step 2: move files to approved bucket (only for assets with changed/new URLs)
       setStep(1, "pending")
       const toMove = selectedAssets
         .filter(a => !prodUrlMap[a.id] || prodUrlMap[a.id] !== a.url)
@@ -74,13 +125,13 @@ export default function AssetPromotion() {
       }
       setStep(1, "done")
 
-      // Step 3: bulk update stage records
+      // Step 3: bulk update stage records with rewritten URL
       setStep(2, "pending")
       const stageUpdatePayload = selectedAssets.map(a => ({
-        id: a.id,
+        ...a,
         status: "OnProd",
         is_active: true,
-        url: a.url.replace("asset-manager-in-review", "asset-manager-approved"),
+        url: rewriteUrl(a.url, S3_BUCKET_IN_REVIEW, S3_BUCKET_APPROVED),
       }))
       await bulkUpdateMediaAssets(stageUpdatePayload)
       setStep(2, "done")
@@ -91,17 +142,19 @@ export default function AssetPromotion() {
         ...a,
         status: "OnProd",
         is_active: true,
-        url: a.url.replace("asset-manager-in-review", "asset-manager-approved"),
+        url: rewriteUrl(a.url, S3_BUCKET_IN_REVIEW, S3_BUCKET_APPROVED),
       }))
       await pc.post("/api/v1/internal/media_assets/batch/", prodPayload)
       setStep(3, "done")
 
       setSelected(new Set())
       qc.invalidateQueries({ queryKey: ["media-assets"] })
-      toast({ title: "Assets promoted to production!" })
+      toast({ title: "✓ Assets promoted to production!" })
     } catch (err: any) {
       const failedStep = currentStepRef.current
       if (failedStep >= 0) setStep(failedStep, "error")
+
+      const errorMsg = getErrorMessage(err, failedStep)
 
       // Rollback: revert stage records + move files back
       try {
@@ -109,18 +162,23 @@ export default function AssetPromotion() {
           id: a.id,
           status: "ReadyForReview",
           is_active: false,
-          url: a.url.replace("asset-manager-approved", "asset-manager-in-review"),
+          url: a.__originalUrl || rewriteUrl(a.url, S3_BUCKET_APPROVED, S3_BUCKET_IN_REVIEW),
         }))
         await bulkUpdateMediaAssets(rollbackPayload)
         const toMoveBack = selectedAssets.map(a => a.id)
         await changeAssetBucket(toMoveBack, "in-review")
-      } catch (_) {
-        // rollback best-effort
+      } catch (rollbackErr: any) {
+        rollbackFailedRef.current = true
+        console.error("Rollback failed:", rollbackErr)
       }
 
+      const rollbackMsg = rollbackFailedRef.current
+        ? "\n⚠️ Rollback FAILED. Contact support with asset IDs."
+        : ""
+
       toast({
-        title: "Promotion failed — rolled back",
-        description: err.response?.data?.message ?? err.message,
+        title: `✗ Promotion failed at ${PROMO_STEPS[failedStep]}`,
+        description: errorMsg + rollbackMsg,
         variant: "destructive",
       })
     } finally {

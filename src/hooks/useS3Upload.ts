@@ -26,16 +26,29 @@ export function useS3Upload() {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         // Step 1: Get presigned URL from backend
-        const presignedResponse = await apiClient.post<PresignedResponse>(
-          "/api/v1/internal/media_assets/presigned_upload_url/",
-          {
-            uuid,
-            filename: file.name,
-            content_type: file.type || "application/octet-stream",
-          }
-        )
+        let presignedResponse
+        try {
+          presignedResponse = await apiClient.post<PresignedResponse>(
+            "/api/v1/internal/media_assets/presigned_upload_url/",
+            {
+              uuid,
+              filename: file.name,
+              content_type: file.type || "application/octet-stream",
+            }
+          )
+        } catch (presignedErr: any) {
+          const status = presignedErr.response?.status
+          let msg = "Failed to get presigned URL"
+          if (status === 400) msg = "Invalid file parameters (filename, type, or UUID)"
+          else if (status === 401 || status === 403) msg = "Access denied - check API key"
+          else if (status === 500) msg = "Server error - try again later"
+          throw new Error(msg)
+        }
 
         const { presigned_url, s3_url } = presignedResponse.data
+        if (!presigned_url || !s3_url) {
+          throw new Error("Invalid presigned URL response - missing fields")
+        }
 
         // Step 2: Upload file to S3 using presigned URL
         const xhr = new XMLHttpRequest()
