@@ -126,6 +126,321 @@ npm run type-check       # Validate TypeScript
 3. Network tab → check presigned URL request + S3 PUT request
 4. Verify S3 bucket CORS configuration allows localhost
 
+---
+
+## Upload Flow — Detailed Testing Guide
+
+### Expected Behavior: Happy Path
+
+**Step 1: File Selection**
+- Select a file (e.g., `training-video.mp4`)
+- Expected: File name and size (MB) displayed below input
+- Example: `File: training-video.mp4 (45.67MB)`
+- Button labeled "Upload to S3" becomes enabled
+
+**Step 2: Click "Upload to S3"**
+- Expected: 
+  - Button changes to "Cancel" (red)
+  - Progress bar appears and starts animating
+  - Status shows: `Uploading... 0%`
+  - Upload spinner visible
+
+**Step 3: Presigned URL Request (Network Tab)**
+- Check DevTools → Network → look for request to:
+  ```
+  POST /api/v1/internal/media_assets/presigned_upload_url/
+  ```
+- Expected Request Headers:
+  ```
+  API-KEY: 7aeec18d-1529-4483-8475-607d5a16afa7
+  Content-Type: application/json
+  ```
+- Expected Request Body:
+  ```json
+  {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "filename": "training-video.mp4",
+    "content_type": "video/mp4"
+  }
+  ```
+- Expected Response (200 OK):
+  ```json
+  {
+    "presigned_url": "https://s3.us-east-1.amazonaws.com/asset-manager-in-review?X-Amz-Algorithm=...",
+    "s3_url": "https://asset-manager-in-review.s3.us-east-1.amazonaws.com/550e8400...mp4"
+  }
+  ```
+
+**Step 4: S3 Direct Upload (Network Tab)**
+- Look for PUT request to S3 URL (will not show full URL in Network tab due to presigned signature)
+- Expected: Request shows `PUT` method
+- Expected: Status code `200` or `201`
+- File size in "Size" column should match uploaded file size
+- Time taken depends on file size and connection speed
+
+**Step 5: Progress Updates**
+- Progress bar should smoothly advance from 0% to 100%
+- Status updates every ~500ms: `Uploading... 25%`, `Uploading... 50%`, etc.
+- Once S3 responds, should immediately jump to 100%
+
+**Step 6: Upload Complete**
+- Expected:
+  - Progress bar disappears
+  - Button returns to "Upload to S3" (enabled)
+  - Toast appears: `✓ Upload complete — File uploaded to S3`
+  - File input clears (filename disappears)
+  - **URL field auto-populates** with S3 URL (format: `https://asset-manager-in-review.s3.us-east-1.amazonaws.com/{uuid}.mp4`)
+
+**Step 7: UUID Validation Before Asset Creation**
+- URL field shows S3 URL in read-only field
+- When you fill form and click "Create Asset":
+  - Form extracts filename from URL (everything after last `/`, before `.`)
+  - Validates it matches the generated UUID
+  - If match: proceeds to backend
+  - If no match: shows error `UUID mismatch — URL filename ({filename}) does not match UUID ({uuid})`
+
+**Step 8: Backend Asset Creation Request**
+- Network tab → look for:
+  ```
+  POST /api/v1/internal/media_assets/batch/
+  ```
+  OR
+  ```
+  POST /api/v1/internal/media_assets/
+  ```
+- Expected Request Body:
+  ```json
+  {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "My Training Video",
+    "type": "video",
+    "category": ["teacher_training"],
+    "description": "Test asset",
+    "url": "https://asset-manager-in-review.s3.us-east-1.amazonaws.com/550e8400...mp4",
+    "status": "ReadyForReview"  // Only if updating existing asset
+  }
+  ```
+- Expected Response (201 Created):
+  ```json
+  {
+    "id": 42,
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "My Training Video",
+    "type": "video",
+    "category": ["teacher_training"],
+    "url": "https://asset-manager-in-review.s3.us-east-1.amazonaws.com/550e8400...mp4",
+    "status": "ReadyForReview",
+    ...
+  }
+  ```
+
+**Step 9: Success**
+- Toast: `✓ Asset created`
+- Form clears
+- Asset appears in the assets list with status `ReadyForReview`
+
+---
+
+### Common Issues & Troubleshooting
+
+#### Issue #1: "Upload failed — Failed to get presigned URL"
+
+**Possible Causes:**
+1. **API Key Invalid or Missing**
+   - Check: `.env` file has `VITE_API_KEY=...` set
+   - Check: Network tab → presigned URL request → Response shows `401 Unauthorized`
+   - Fix: Update `.env` with correct API key from backend
+
+2. **Backend Endpoint Not Running**
+   - Check: Backend is running at `VITE_API_BASE_URL`
+   - Try: `curl -X POST http://localhost:8000/api/v1/internal/media_assets/presigned_upload_url/ -H "API-KEY: ..." -H "Content-Type: application/json" -d '{"uuid":"test", "filename":"test.mp4", "content_type":"video/mp4"}'`
+   - Fix: Start backend server
+
+3. **Invalid Request Parameters**
+   - Network tab → presigned URL request → Response shows `400 Bad Request`
+   - Check response details in Network tab
+   - Fix: Ensure filename is not empty, UUID is valid format
+
+#### Issue #2: Progress Bar Stuck at 50%, Then Error
+
+**Possible Causes:**
+1. **File Too Large for Timeout**
+   - Presigned URLs expire in 15 minutes
+   - Large files (>1GB) may not finish in time
+   - Fix: Retry with smaller file, or increase timeout in backend
+
+2. **S3 Bucket CORS Not Configured**
+   - Browser will block PUT request if CORS headers missing
+   - Check Network tab → S3 PUT request → Response shows CORS error
+   - Fix: Configure S3 bucket CORS:
+     ```json
+     {
+       "AllowedHeaders": ["*"],
+       "AllowedMethods": ["GET", "PUT", "POST"],
+       "AllowedOrigins": ["http://localhost:5173", "https://fde-staging.taleemabad.com"],
+       "ExposeHeaders": ["ETag", "x-amz-version-id"]
+     }
+     ```
+
+3. **Network Interruption**
+   - Upload started but connection dropped mid-stream
+   - Check: Browser console for network errors
+   - Fix: Retry from beginning (no resume capability currently)
+
+#### Issue #3: "Upload Complete" But URL Field Stays Empty
+
+**Possible Causes:**
+1. **S3 Response Malformed**
+   - Check Network tab → S3 PUT → Response body should be empty (200 OK with no body is normal)
+   - If response contains error XML, upload actually failed
+   - Fix: Check S3 permissions for PUT requests
+
+2. **Code Bug in Completion Handler**
+   - Check Browser Console (F12) for errors
+   - Look for: `Cannot read property 's3_url' of undefined`
+   - Fix: Ensure presigned URL response includes both fields
+
+#### Issue #4: "UUID Mismatch" Error When Trying to Create Asset
+
+**Possible Causes:**
+1. **URL Format Changed After Upload**
+   - Frontend extracts UUID from URL: takes last path segment before extension
+   - If URL format is different than expected, extraction fails
+   - Check: URL field value, manually extract UUID
+   - Example:
+     ```
+     URL: https://asset-manager-in-review.s3.us-east-1.amazonaws.com/550e8400-e29b-41d4-a716-446655440000.mp4?X-Amz-...
+     Extracted: 550e8400-e29b-41d4-a716-446655440000 (removes query string)
+     UUID: 550e8400-e29b-41d4-a716-446655440000
+     ✓ Match!
+     ```
+
+2. **Different UUID Generated**
+   - Form component uses `useMemo` to keep UUID stable
+   - If you refresh page, new UUID generated
+   - If you edit existing asset, UUID comes from `asset.uuid`
+   - Fix: Don't refresh page during upload/form flow
+
+#### Issue #5: Backend Shows 409 Conflict — "Asset already exists with this UUID"
+
+**Possible Causes:**
+1. **UUID Already Used**
+   - UUID is globally unique in database
+   - If same UUID sent twice, second request fails
+   - Check: Query database: `SELECT * FROM asset_manager_mediaasset WHERE uuid = '550e8400...'`
+   - Fix: Generate new UUID (refresh page, or create new asset)
+
+2. **S3 File Exists But Asset Not in DB**
+   - File uploaded to S3 but asset creation failed
+   - Next upload with same file sees S3 conflict but tries to create new asset
+   - Fix: Delete file from S3 or use different UUID
+
+#### Issue #6: "CORS Error" in Browser Console But Upload Shows as Complete
+
+**Why This Happens:**
+- Browser blocks response due to CORS, but file is actually on S3
+- Code detects this: `if (lastProgress > 0) treat as success`
+- This is a **known limitation** — can't reliably detect S3 response due to CORS
+
+**Verify Upload Actually Worked:**
+1. Check S3 bucket directly
+2. Search for file with UUID name: `{uuid}.{extension}`
+3. If file exists in S3, upload succeeded
+4. Proceed with asset creation
+
+**To Fully Fix:**
+- Configure S3 CORS headers (see Issue #2)
+- Or implement server-side upload confirmation endpoint
+
+#### Issue #7: "Access Denied" Error on Asset Creation
+
+**Possible Causes:**
+1. **API Key Invalid**
+   - Check: Network tab → POST request → Headers include `API-KEY: ...`
+   - Response shows `401 Unauthorized` or `403 Forbidden`
+   - Fix: Verify API key is correct and has `HasAPIKey` permission
+
+2. **Backend Permission Issue**
+   - Check: Backend logs for permission errors
+   - Fix: Ensure user/token has media_assets.add_mediaasset permission
+
+---
+
+### Verification Checklist
+
+Use this checklist when testing uploads:
+
+- [ ] **File Selection**
+  - [ ] File input accepts files
+  - [ ] File name and size display correctly
+  - [ ] "Upload to S3" button enables
+  
+- [ ] **Presigned URL**
+  - [ ] Network tab shows POST to `/presigned_upload_url/`
+  - [ ] Request includes uuid, filename, content_type
+  - [ ] Response includes presigned_url and s3_url
+  - [ ] Response status is 200
+  
+- [ ] **S3 Upload**
+  - [ ] Network tab shows PUT request (presigned S3 URL)
+  - [ ] Progress bar animates smoothly 0→100%
+  - [ ] S3 PUT returns 200 or 201
+  - [ ] Upload time reasonable for file size
+  
+- [ ] **Completion**
+  - [ ] URL field auto-populates with S3 URL
+  - [ ] Toast shows "Upload complete"
+  - [ ] File input clears
+  - [ ] Button returns to normal state
+  
+- [ ] **Asset Creation**
+  - [ ] URL field shows full S3 URL
+  - [ ] Form validates UUID matches extracted filename
+  - [ ] POST to media_assets/batch/ or media_assets/
+  - [ ] Asset appears in list with status "ReadyForReview"
+  - [ ] Toast shows "✓ Asset created"
+  
+- [ ] **Error Handling**
+  - [ ] Invalid API key shows clear error message
+  - [ ] Network error auto-retries up to 2 times
+  - [ ] Timeout shows file size suggestion
+  - [ ] Cancel button stops upload
+  - [ ] Duplicate UUID shows specific error
+
+---
+
+### Network Tab Requests Checklist
+
+When testing, verify these requests in DevTools → Network tab:
+
+1. **Presigned URL Request**
+   ```
+   POST /api/v1/internal/media_assets/presigned_upload_url/ 200
+   Size: ~500 B
+   Time: <500ms
+   ```
+
+2. **S3 PUT Request**
+   ```
+   PUT https://asset-manager-in-review.s3.us-east-1.amazonaws.com/... 200
+   Size: {file_size}
+   Time: {depends on file size and connection}
+   ```
+
+3. **Asset Creation Request**
+   ```
+   POST /api/v1/internal/media_assets/batch/ 201
+   Size: ~1-2 KB
+   Time: <1s
+   ```
+
+4. **Optional: Assets List Refresh**
+   ```
+   GET /api/v1/media_assets/ 200
+   Size: variable (all assets)
+   Time: <2s
+   ```
+
 ### Add New Component
 1. Create `src/components/MyComponent.tsx`
 2. Export from `src/components/index.ts`
