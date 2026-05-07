@@ -125,7 +125,17 @@ export default function ReviewUpload() {
 
       // ── Step 1: Create or update course on prod ──────────────────
       setStep(1, "pending")
-      console.log(`[Step 1] Checking if course exists: ${course.title}`)
+      console.log(`[Step 1] Syncing course: ${course.title}`)
+
+      // Fetch ALL prod courses upfront for batch comparison (not one-by-one)
+      const allProdCourses = await pc.get(
+        `/api/v1/courses/?limit=1000`
+      )
+      const allProdCoursesList = ensureArray(allProdCourses.data)
+      const prodCourseByUuid = Object.fromEntries(
+        allProdCoursesList.map(c => [c.uuid, c])
+      )
+      console.log(`[Step 1] Prod has ${allProdCoursesList.length} courses`)
 
       const coursePayload = {
         uuid: course.uuid, title: course.title, description: course.description,
@@ -134,29 +144,32 @@ export default function ReviewUpload() {
         type: course.type, level: course.level,
       }
 
-      // Check if course with this UUID already exists
+      // Check if course with this UUID already exists on prod
       let prodCourseId: number | null = null
-      try {
-        const existingCourses = await pc.get(
-          `/api/v1/courses/?uuid=${course.uuid}`
-        )
-        const coursesList = ensureArray(existingCourses.data)
-        if (coursesList.length > 0) {
-          // Update existing course (using numeric ID in URL)
-          prodCourseId = coursesList[0].id
-          console.log(`[Step 1] Course already exists, updating... ID: ${prodCourseId}`)
+      const existingProdCourse = prodCourseByUuid[course.uuid]
+
+      if (existingProdCourse) {
+        // Course exists — check if staging is newer before updating
+        const stagingTime = new Date((course as any).updated_at || 0).getTime()
+        const prodTime = new Date((existingProdCourse as any).updated_at || 0).getTime()
+
+        if (stagingTime > prodTime) {
+          // Staging is newer → UPDATE
+          prodCourseId = existingProdCourse.id
+          console.log(`[Step 1] Course UUID ${course.uuid} changed on staging - updating on prod (ID: ${prodCourseId})`)
           await pc.patch(`/api/v1/internal/courses/${prodCourseId}/`, coursePayload)
           console.log(`[Step 1] Course updated: ${course.uuid}`)
         } else {
-          // Create new course
-          console.log(`[Step 1] Creating new course: ${course.title}`)
-          const createRes = await pc.post("/api/v1/internal/courses/", coursePayload)
-          prodCourseId = createRes.data?.id || coursePayload.id
-          console.log(`[Step 1] Course created: ${course.uuid}`)
+          // Prod is newer or equal → SKIP
+          prodCourseId = existingProdCourse.id
+          console.log(`[Step 1] Course UUID ${course.uuid} already synced, skipping update`)
         }
-      } catch (err) {
-        console.error(`[Step 1] Error checking/creating course:`, err)
-        throw err
+      } else {
+        // Course doesn't exist on prod → CREATE
+        console.log(`[Step 1] Course UUID ${course.uuid} not found on prod - creating new`)
+        const createRes = await pc.post("/api/v1/internal/courses/", coursePayload)
+        prodCourseId = createRes.data?.id
+        console.log(`[Step 1] Course created: ${course.uuid} (ID: ${prodCourseId})`)
       }
 
       setStep(1, "done")
