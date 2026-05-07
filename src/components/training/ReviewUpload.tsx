@@ -130,7 +130,7 @@ export default function ReviewUpload() {
       const coursePayload = {
         uuid: course.uuid, title: course.title, description: course.description,
         keywords: course.keywords, time_duration: course.time_duration, index: course.index,
-        thumbnail_url: course.thumbnail_url, is_active: true, status: "OnProd",
+        thumbnail_url: course.thumbnail_url, is_active: course.is_active ?? true, status: "OnProd",
         type: course.type, level: course.level,
       }
 
@@ -198,7 +198,7 @@ export default function ReviewUpload() {
           uuid: t.uuid, title: t.title, description: t.description,
           content: t.content, index: t.index, is_grand_assessment: t.is_grand_assessment,
           course: course.uuid,
-          is_active: true, status: "OnProd",
+          is_active: t.is_active ?? true, status: "OnProd",
           media_asset: t.media_asset?.id ? (assetIdMap[t.media_asset.id] ?? null) : null,
           tags: t.tags ?? [],
         }
@@ -304,7 +304,7 @@ export default function ReviewUpload() {
             statement_media_asset: q.statement_media_asset_id
               ? (assetIdMap[q.statement_media_asset_id] ?? null)
               : null,
-            is_active: true, status: "OnProd",
+            is_active: q.is_active ?? true, status: "OnProd",
             training: prodTrainingId,
             grand_quiz: null,
           }
@@ -390,7 +390,7 @@ export default function ReviewUpload() {
           const gqPayload = {
             uuid: gq.uuid, title: gq.title, description: gq.description,
             instructions: gq.instructions, type: gq.type, level: gq.level,
-            is_active: true, status: "OnProd",
+            is_active: gq.is_active ?? true, status: "OnProd",
           }
 
           const existingProdGq = prodGqByUuid[gq.uuid]
@@ -494,7 +494,7 @@ export default function ReviewUpload() {
             statement_media_asset: q.statement_media_asset_id
               ? (assetIdMap[q.statement_media_asset_id] ?? null)
               : null,
-            is_active: true, status: "OnProd",
+            is_active: q.is_active ?? true, status: "OnProd",
             training: null,
             grand_quiz: prodGrandQuizId,
           }

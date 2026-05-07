@@ -1,0 +1,228 @@
+[
+  {
+    "type": "mcq",
+    "question_statement": "A teacher delivers a well-structured explanation while students listen quietly. At the end, only a few students can answer questions. What does this situation indicate?",
+    "options": [
+      "Students were fully engaged",
+      "Teaching was effective for all learners",
+      "Engagement was limited despite instruction",
+      "The lesson was too short"
+    ],
+    "answers": [3],
+    "hints": [
+      "Students may appear attentive, but listening alone does not guarantee engagement or understanding.",
+      "If only a few students can respond, learning has not reached all learners effectively.",
+      "This reflects a gap between teaching and actual student engagement and understanding.",
+      "The issue is not time, but lack of active involvement."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 1
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which statements correctly describe GBTLA? (Select all that apply)",
+    "options": [
+      "Learning outcomes guide activity selection",
+      "Games are used as structured learning tools",
+      "Teaching, learning, and assessment are integrated",
+      "Games are used only after teaching",
+      "Teachers facilitate learning during activities"
+    ],
+    "answers": [1, 2, 3, 5],
+    "hints": [
+      "Curriculum alignment is the starting point.",
+      "Games are structured tools, not random activities.",
+      "All three processes happen together.",
+      "Games are used before, during, and after learning.",
+      "Teachers guide and support learning actively."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 2
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher selects a game first and then tries to adjust the lesson around it. What is the issue in this approach?",
+    "options": [
+      "The activity will take more time",
+      "The lesson may not align with learning outcomes",
+      "Students may not enjoy the activity",
+      "The game may be too difficult"
+    ],
+    "answers": [2],
+    "hints": [
+      "Time may vary, but the core issue is not time — it is alignment with learning goals.",
+      "In GBTLA, lessons must start from learning outcomes. Choosing a game first risks misalignment with curriculum objectives.",
+      "Enjoyment is not the main concern; learning alignment is.",
+      "Difficulty is not the core issue here."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 3
+  },
+  {
+    "type": "mcq",
+    "question_statement": "Which stage of the 5E model focuses on students interacting with the activity and exploring ideas?",
+    "options": [
+      "Engage",
+      "Explore",
+      "Explain",
+      "Evaluate"
+    ],
+    "answers": [2],
+    "hints": [
+      "Engage introduces the concept and builds curiosity.",
+      "Explore is where students actively interact and investigate concepts.",
+      "Explain is where the teacher clarifies and connects ideas.",
+      "Evaluate focuses on checking understanding."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 4
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher wants students to understand a process (e.g., water cycle). Which offline game is most suitable?",
+    "options": [
+      "Sequencing cards",
+      "Bingo",
+      "Matching cards",
+      "Quiz competition"
+    ],
+    "answers": [1],
+    "hints": [
+      "Sequencing helps students understand steps in order.",
+      "Bingo focuses on recall, not processes.",
+      "Matching focuses on relationships, not sequence.",
+      "This is better for review than conceptual understanding."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 5
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which features describe effective use of board games in learning? (Select all that apply)",
+    "options": [
+      "Students move by solving questions",
+      "Students collaborate and discuss answers",
+      "Students move randomly without thinking",
+      "Students engage with lesson concepts",
+      "Students memorize without interaction"
+    ],
+    "answers": [1, 2, 4],
+    "hints": [
+      "Movement should be linked to learning tasks.",
+      "Collaboration strengthens understanding.",
+      "Random movement removes learning value.",
+      "Activities must connect to lesson concepts.",
+      "Memorization alone is not active learning."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 6
+  },
+  {
+    "type": "msq",
+    "question_statement": "Which statements describe the use of Google Forms in GBTLA? (Select all that apply)",
+    "options": [
+      "They are linked to lesson plans on LMS",
+      "Teachers must create them from scratch",
+      "They provide quick assessment of understanding",
+      "Responses are recorded automatically",
+      "They are only used for homework"
+    ],
+    "answers": [1, 3, 4],
+    "hints": [
+      "Forms are provided within LMS for each lesson.",
+      "Teachers are not required to create them independently.",
+      "They help quickly assess learning outcomes.",
+      "Responses are automatically collected and stored.",
+      "They are used for assessment, not limited to homework."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 7
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher introduces a challenge where students must complete tasks within a time limit. What is the main benefit?",
+    "options": [
+      "Reduces workload",
+      "Increases competition only",
+      "Helps maintain focus and attention",
+      "Eliminates discussion"
+    ],
+    "answers": [3],
+    "hints": [
+      "Time-bound tasks are not about workload reduction.",
+      "Competition may occur, but focus is the key benefit.",
+      "Time limits keep students focused and engaged.",
+      "Discussion should still be encouraged."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 8
+  },
+  {
+    "type": "mcq",
+    "question_statement": "During a group-based activity, students help each other solve problems. This is an example of:",
+    "options": [
+      "Passive learning",
+      "Collaboration",
+      "Individual learning",
+      "Testing"
+    ],
+    "answers": [2],
+    "hints": [
+      "Students are actively involved.",
+      "Working together reflects collaboration.",
+      "This is not individual work.",
+      "This is learning, not testing."
+    ],
+    "bloom_level": "understand",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 9
+  },
+  {
+    "type": "mcq",
+    "question_statement": "A teacher observes that students are off-task during an activity. What is the best response?",
+    "options": [
+      "Stop the activity",
+      "Ignore behaviour",
+      "Introduce structure and clear rules",
+      "Move to next topic"
+    ],
+    "answers": [3],
+    "hints": [
+      "The activity can be improved instead of stopped.",
+      "Ignoring behaviour worsens the issue.",
+      "Structure helps guide behaviour.",
+      "This avoids the problem."
+    ],
+    "bloom_level": "apply",
+    "is_active": true,
+    "status": "ReadyForReview",
+    "training": TRAINING_ID_HERE,
+    "index": 10
+  }
+]
