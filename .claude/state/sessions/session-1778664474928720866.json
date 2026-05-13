@@ -1,0 +1,44 @@
+{
+  "changes_this_session": [],
+  "cwd": "/home/oye/Documents/free_work/personal-agent/repos/taleemabad-cms",
+  "duration_minutes": 0,
+  "ended_at": "2026-05-13T09:28:04Z",
+  "event_seq": 0,
+  "fork_count": 0,
+  "git": {
+    "branch": "master",
+    "last_commit": "52467c9",
+    "uncommitted_changes": 0
+  },
+  "harness_mem": {
+    "healthy": true,
+    "last_checked": "2026-05-13T09:27:54Z",
+    "last_error": ""
+  },
+  "intent": "literal",
+  "last_event_id": "",
+  "last_message_hash": "846003f252d70934",
+  "last_message_length": 768,
+  "memory_logged": true,
+  "orchestration": {
+    "max_state_retries": 3,
+    "retry_backoff_seconds": 10
+  },
+  "parent_session_id": null,
+  "plans": {
+    "completed_tasks": 0,
+    "exists": false,
+    "last_modified": 0,
+    "pending_tasks": 0,
+    "todo_tasks": 0,
+    "wip_tasks": 0
+  },
+  "project_name": "taleemabad-cms",
+  "prompt_seq": 1,
+  "resume_token": "resume-1778664474928727132",
+  "session_id": "session-1778664474928720866",
+  "started_at": "2026-05-13T09:27:54Z",
+  "state": "stopped",
+  "state_version": 1,
+  "updated_at": "2026-05-13T09:27:54Z"
+}
