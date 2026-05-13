@@ -1,0 +1,8 @@
+{
+  "name": "taleemabad-cms",
+  "version": "0.1.0",
+  "description": "React SPA for content management — Courses, Trainings, Questions, Assets, S3 Uploads",
+  "skills": [
+    "./skills/"
+  ]
+}

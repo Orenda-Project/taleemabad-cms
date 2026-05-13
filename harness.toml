@@ -1,0 +1,30 @@
+# Harness v4 Configuration
+# Edit this file, then run `harness sync` to generate CC plugin files.
+
+[project]
+name = "taleemabad-cms"
+version = "0.1.0"
+description = "React SPA for content management — Courses, Trainings, Questions, Assets, S3 Uploads"
+
+[agent]
+# default = "security-reviewer"
+
+[env]
+# CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "1"
+
+[safety.permissions]
+deny = [
+  "Bash(sudo:*)",
+]
+ask = [
+  "Bash(rm -r:*)",
+  "Bash(git push --force:*)",
+]
+
+[safety.sandbox]
+failIfUnavailable = false
+
+[safety.sandbox.filesystem]
+# denyRead = [".env", "secrets/**"]
+# allowRead = [".env.example"]
+
