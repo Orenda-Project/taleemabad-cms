@@ -115,10 +115,10 @@ export default function AssetPromotion() {
         a.__originalUrl = a.url
       })
 
-      // Step 2: move files to approved bucket (only for assets with changed/new URLs)
+      // Step 2: move files to approved bucket (skip assets already in approved bucket or unchanged from prod)
       setStep(1, "pending")
       const toMove = selectedAssets
-        .filter(a => !prodUrlMap[a.id] || prodUrlMap[a.id] !== a.url)
+        .filter(a => !a.url.includes(S3_BUCKET_APPROVED) && (!prodUrlMap[a.id] || prodUrlMap[a.id] !== a.url))
         .map(a => a.id)
       if (toMove.length > 0) {
         await changeAssetBucket(toMove, "approved")
@@ -159,14 +159,16 @@ export default function AssetPromotion() {
       // Rollback: revert stage records + move files back
       try {
         const rollbackPayload = selectedAssets.map(a => ({
-          id: a.id,
+          ...a,
           status: "ReadyForReview",
           is_active: false,
           url: a.__originalUrl || rewriteUrl(a.url, S3_BUCKET_APPROVED, S3_BUCKET_IN_REVIEW),
         }))
         await bulkUpdateMediaAssets(rollbackPayload)
-        const toMoveBack = selectedAssets.map(a => a.id)
-        await changeAssetBucket(toMoveBack, "in-review")
+        const toMoveBack = selectedAssets
+          .filter(a => (a.__originalUrl || a.url).includes(S3_BUCKET_IN_REVIEW))
+          .map(a => a.id)
+        if (toMoveBack.length > 0) await changeAssetBucket(toMoveBack, "in_review")
       } catch (rollbackErr: any) {
         rollbackFailedRef.current = true
         console.error("Rollback failed:", rollbackErr)
