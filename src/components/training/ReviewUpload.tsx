@@ -16,6 +16,8 @@ import { updateCourse } from "../../api/courses"
 import { useQueryClient } from "@tanstack/react-query"
 import { useToast } from "../../hooks/use-toast"
 import type { Level } from "../../types"
+import { parseBulkResponse, buildUuidIdMap } from "../../api/retool"
+import type { ConflictItem } from "../../api/retool"
 
 const ensureArray = (data: any): any[] => {
   if (Array.isArray(data)) return data
@@ -61,6 +63,7 @@ export default function ReviewUpload() {
 
   const [uploading, setUploading] = useState<number | null>(null)
   const [steps, setSteps] = useState<StepState[]>(Array(STEPS.length).fill("idle") as StepState[])
+  const [syncConflicts, setSyncConflicts] = useState<ConflictItem[]>([])
 
   useEffect(() => {
     setSelectedLevel(levels.length > 0 ? levels[0] : undefined)
@@ -79,18 +82,25 @@ export default function ReviewUpload() {
     })
   }
 
+  function throwOnConflicts(data: unknown, label: string): Record<string, number> {
+    const { resolved, conflicts } = parseBulkResponse(data)
+    if (conflicts.length > 0) {
+      setSyncConflicts(conflicts)
+      throw new Error(`${label}: ${conflicts.length} item(s) blocked — see conflicts above`)
+    }
+    return buildUuidIdMap(resolved)
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // FLOW 1: Upload to Prod
   // For courses being pushed to prod for the first time (status != "OnProd").
-  // Assumption: nothing exists on prod yet — POST everything directly.
-  // No per-UUID pre-check for trainings (avoids caching empty responses that
-  // would break the post-create ID resolution in the same request cycle).
   // ─────────────────────────────────────────────────────────────────────────
   async function uploadToProd(course: (typeof courses)[0]) {
     if (!selectedOrg) return
     const pc = prodClient(selectedOrg.prod_url)
     setUploading(course.id)
     setSteps(Array(STEPS.length).fill("idle") as StepState[])
+    setSyncConflicts([])
     currentStepRef.current = -1
 
     try {
@@ -184,22 +194,10 @@ export default function ReviewUpload() {
         }))
 
         console.log(`[Step 2] POSTing ${trainingPayloads.length} trainings`)
-        await pc.post("/api/v1/internal/trainings/", trainingPayloads)
-
-        // Fetch each training by UUID to get its prod ID.
-        // Use ?is_active=True explicitly — different URL from any cached ?uuid=X&limit=1
-        // requests — guarantees a fresh DB hit even within the 5-min cache window.
-        console.log(`[Step 2B] Resolving prod IDs for created trainings`)
-        for (const t of stagingTrainings) {
-          const res = await pc.get(`/api/v1/trainings/?uuid=${t.uuid}&limit=1&is_active=True`)
-          const prodT = ensureArray(res.data)[0]
-          if (prodT?.id) {
-            trainingUuidToIdMap[t.uuid] = prodT.id
-            console.log(`  ✓ UUID=${t.uuid} → prod ID=${prodT.id}`)
-          } else {
-            console.warn(`  ✗ Could not resolve prod ID for UUID=${t.uuid}`)
-          }
-        }
+        const trainRes = await pc.post("/api/v1/internal/trainings/", trainingPayloads)
+        const resolvedMap = throwOnConflicts(trainRes.data, "Trainings")
+        Object.assign(trainingUuidToIdMap, resolvedMap)
+        console.log(`[Step 2] ✓ Resolved ${Object.keys(resolvedMap).length} training IDs from response`)
       }
       setStep(2, "done")
 
@@ -233,7 +231,8 @@ export default function ReviewUpload() {
 
         if (questionPayloads.length > 0) {
           console.log(`[Step 3] POSTing ${questionPayloads.length} training questions`)
-          await pc.post("/api/v1/internal/training_question/", questionPayloads)
+          const qRes = await pc.post("/api/v1/internal/training_question/", questionPayloads)
+          throwOnConflicts(qRes.data, "Training questions")
           console.log(`[Step 3] ✓ Done`)
         }
       }
@@ -261,15 +260,13 @@ export default function ReviewUpload() {
   // ─────────────────────────────────────────────────────────────────────────
   // FLOW 2: Sync Changes to Prod
   // For courses already on prod (status == "OnProd").
-  // Matches every entity by UUID → PATCH if found, POST if new (added since
-  // last upload). Per-UUID fetch uses a unique URL per training so cache_page(300)
-  // never returns a stale hit from a prior request in the same cycle.
   // ─────────────────────────────────────────────────────────────────────────
   async function syncToProd(course: (typeof courses)[0]) {
     if (!selectedOrg) return
     const pc = prodClient(selectedOrg.prod_url)
     setUploading(course.id)
     setSteps(Array(STEPS.length).fill("idle") as StepState[])
+    setSyncConflicts([])
     currentStepRef.current = -1
 
     try {
@@ -335,30 +332,15 @@ export default function ReviewUpload() {
       setStep(1, "done")
 
       // ── Step 2: Sync trainings ──────────────────────────────────────────
-      // Per-UUID fetch each training on prod. Each ?uuid=X URL is unique →
-      // always a cache miss → real DB state regardless of cache_page(300).
+      // Bulk POST all trainings — backend upserts by uuid (update or create).
       setStep(2, "pending")
       const stagingTrainingUuidById: Record<number, string> = Object.fromEntries(
         stagingTrainings.map(t => [t.id, t.uuid])
       )
       const trainingUuidToIdMap: Record<string, number> = {}
 
-      console.log(`[Step 2] Fetching ${stagingTrainings.length} prod trainings by UUID (parallel)`)
-      const prodTrainingLookups = await Promise.all(
-        stagingTrainings.map(t =>
-          pc.get(`/api/v1/trainings/?uuid=${t.uuid}&limit=1`)
-            .then(r => ensureArray(r.data)[0] ?? null)
-            .catch(() => null)
-        )
-      )
-
-      const createTrainingPayload: any[] = []
-      const updateTrainingPayload: Array<{ id: number; payload: any }> = []
-
-      for (let i = 0; i < stagingTrainings.length; i++) {
-        const st = stagingTrainings[i]
-        const prodT = prodTrainingLookups[i]
-        const payload = {
+      if (stagingTrainings.length > 0) {
+        const trainingPayloads = stagingTrainings.map(st => ({
           uuid: st.uuid,
           title: st.title,
           description: st.description,
@@ -370,61 +352,27 @@ export default function ReviewUpload() {
           status: "OnProd",
           media_asset: st.media_asset?.id ? (assetIdMap[st.media_asset.id] ?? null) : null,
           tags: st.tags ?? [],
-        }
+        }))
 
-        if (prodT) {
-          trainingUuidToIdMap[st.uuid] = prodT.id
-          console.log(`  ✓ UUID=${st.uuid} → prod ID=${prodT.id}, PATCH`)
-          updateTrainingPayload.push({ id: prodT.id, payload })
-        } else {
-          console.log(`  ✗ UUID=${st.uuid} not on prod → CREATE`)
-          createTrainingPayload.push(payload)
-        }
-      }
-
-      // PATCH existing trainings
-      for (const { id, payload } of updateTrainingPayload) {
-        await pc.patch(`/api/v1/internal/trainings/${id}/`, payload)
-      }
-
-      // POST new trainings, then fetch IDs with ?is_active=True (different cache key)
-      if (createTrainingPayload.length > 0) {
-        await pc.post("/api/v1/internal/trainings/", createTrainingPayload)
-        for (const payload of createTrainingPayload) {
-          const res = await pc.get(`/api/v1/trainings/?uuid=${payload.uuid}&limit=1&is_active=True`)
-          const prodT = ensureArray(res.data)[0]
-          if (prodT?.id) {
-            trainingUuidToIdMap[payload.uuid] = prodT.id
-            console.log(`  [New] UUID=${payload.uuid} → prod ID=${prodT.id}`)
-          }
-        }
+        console.log(`[Step 2] POSTing ${trainingPayloads.length} trainings (upsert by uuid)`)
+        const trainRes = await pc.post("/api/v1/internal/trainings/", trainingPayloads)
+        const resolvedMap = throwOnConflicts(trainRes.data, "Trainings")
+        Object.assign(trainingUuidToIdMap, resolvedMap)
+        console.log(`[Step 2] ✓ Resolved ${Object.keys(resolvedMap).length} training IDs`)
       }
       setStep(2, "done")
 
       // ── Step 3: Sync training questions ─────────────────────────────────
+      // Bulk POST all questions — backend upserts by uuid.
       setStep(3, "pending")
-      const trainingIdsForQs = Object.values(trainingUuidToIdMap)
-      let existingProdQuestions: any[] = []
-      if (trainingIdsForQs.length > 0) {
-        const res = await pc.get(
-          `/api/v1/training_questions/?training_ids=${trainingIdsForQs.join(",")}&limit=10000`
-        )
-        existingProdQuestions = ensureArray(res.data)
-        console.log(`[Step 3] ${existingProdQuestions.length} existing questions on prod`)
-      }
-
-      const prodQByUuid = Object.fromEntries(existingProdQuestions.map(q => [q.uuid, q]))
-      const createQPayload: any[] = []
-      const updateQPayload: Array<{ id: number; payload: any }> = []
-
+      const qPayloads: any[] = []
       for (const q of stagingQuestions) {
-        if (!q.training) continue
+        if (!q.training) { console.warn(`[Step 3] SKIP ${q.uuid}: no training`); continue }
         const tUuid = stagingTrainingUuidById[q.training]
-        if (!tUuid) continue
+        if (!tUuid) { console.warn(`[Step 3] SKIP ${q.uuid}: training ID ${q.training} not in map`); continue }
         const prodTrainingId = trainingUuidToIdMap[tUuid]
-        if (!prodTrainingId) { console.warn(`[Step 3] SKIP ${q.uuid}: training not resolved`); continue }
-
-        const qPayload = {
+        if (!prodTrainingId) { console.warn(`[Step 3] SKIP ${q.uuid}: training UUID ${tUuid} not resolved`); continue }
+        qPayloads.push({
           uuid: q.uuid,
           index: q.index,
           type: q.type,
@@ -438,25 +386,14 @@ export default function ReviewUpload() {
           status: "OnProd",
           training: prodTrainingId,
           grand_quiz: null,
-        }
-
-        const existingQ = prodQByUuid[q.uuid]
-        if (existingQ) {
-          console.log(`  ✓ UUID=${q.uuid} → PATCH ID=${existingQ.id}`)
-          updateQPayload.push({ id: existingQ.id, payload: qPayload })
-        } else {
-          createQPayload.push(qPayload)
-        }
+        })
       }
 
-      if (createQPayload.length > 0) {
-        console.log(`[Step 3] POSTing ${createQPayload.length} new questions`)
-        await pc.post("/api/v1/internal/training_question/", createQPayload)
-      }
-      for (const { id, payload } of updateQPayload) {
-        await pc.patch(`/api/v1/internal/training_question/${id}/`, payload).catch(e =>
-          console.warn(`[Step 3] PATCH failed for question ID=${id}:`, e.message)
-        )
+      if (qPayloads.length > 0) {
+        console.log(`[Step 3] POSTing ${qPayloads.length} training questions (upsert by uuid)`)
+        const qRes = await pc.post("/api/v1/internal/training_question/", qPayloads)
+        throwOnConflicts(qRes.data, "Training questions")
+        console.log(`[Step 3] ✓ Done`)
       }
       setStep(3, "done")
 
@@ -499,100 +436,58 @@ export default function ReviewUpload() {
     const gqUuidToIdMap: Record<string, number> = {}
 
     if (stagingGqs.length > 0) {
-      const existingProdGqs = ensureArray(
-        (await pc.get(`/api/v1/grand_quizzes/?level=${selectedLevel?.id}&limit=1000`)).data
-      )
-      const prodGqByUuid = Object.fromEntries(existingProdGqs.map(gq => [gq.uuid, gq]))
+      const gqPayloads = stagingGqs.map(gq => ({
+        uuid: gq.uuid,
+        title: gq.title,
+        description: gq.description,
+        instructions: gq.instructions,
+        type: gq.type,
+        level: gq.level,
+        is_active: gq.is_active ?? true,
+        status: "OnProd",
+      }))
 
-      const createGqPayload: any[] = []
-      const updateGqPayload: Array<{ id: number; payload: any }> = []
-
-      for (const gq of stagingGqs) {
-        const gqPayload = {
-          uuid: gq.uuid, title: gq.title, description: gq.description,
-          instructions: gq.instructions, type: gq.type, level: gq.level,
-          is_active: gq.is_active ?? true, status: "OnProd",
-        }
-
-        const byUuid = prodGqByUuid[gq.uuid]
-        if (byUuid) {
-          gqUuidToIdMap[gq.uuid] = byUuid.id
-          updateGqPayload.push({ id: byUuid.id, payload: gqPayload })
-        } else {
-          const byLevelType = existingProdGqs.find(
-            (pg: any) => pg.level === gq.level && pg.type === gq.type
-          )
-          if (byLevelType) {
-            console.log(`[Step 4] level+type fallback: UUID=${gq.uuid} → prod ID=${byLevelType.id}`)
-            gqUuidToIdMap[gq.uuid] = byLevelType.id
-            updateGqPayload.push({ id: byLevelType.id, payload: gqPayload })
-          } else {
-            createGqPayload.push(gqPayload)
-          }
-        }
-      }
-
-      if (createGqPayload.length > 0) {
-        const res = await pc.post("/api/v1/internal/grand_quizzes/", createGqPayload)
-        for (const gq of ensureArray(res.data)) {
-          if (gq.uuid) gqUuidToIdMap[gq.uuid] = gq.id
-        }
-      }
-      for (const { id, payload } of updateGqPayload) {
-        await pc.patch(`/api/v1/internal/grand_quizzes/${id}/`, payload).catch(e =>
-          console.warn(`[Step 4] PATCH failed GQ ID=${id}:`, e.message)
-        )
-      }
+      console.log(`[Step 4] POSTing ${gqPayloads.length} grand quizzes (upsert by uuid)`)
+      const gqRes = await pc.post("/api/v1/internal/grand_quizzes/", gqPayloads)
+      const resolvedMap = throwOnConflicts(gqRes.data, "Grand quizzes")
+      Object.assign(gqUuidToIdMap, resolvedMap)
+      console.log(`[Step 4] ✓ Resolved ${Object.keys(resolvedMap).length} grand quiz IDs`)
     }
     setStepFn(4, "done")
 
     // ── Step 5: Grand quiz questions ──────────────────────────────────────
+    // Bulk POST all GQ questions — backend upserts by uuid.
     setStepFn(5, "pending")
     if (stagingGqQuestions.length > 0) {
-      const gqIds = Object.values(gqUuidToIdMap)
-      let existingProdGqQs: any[] = []
-      if (gqIds.length > 0) {
-        existingProdGqQs = ensureArray(
-          (await pc.get(`/api/v1/training_questions/?grand_quiz_ids=${gqIds.join(",")}&limit=10000`)).data
-        )
-      }
-      const prodGqQByUuid = Object.fromEntries(existingProdGqQs.map(q => [q.uuid, q]))
-
-      const createGqQPayload: any[] = []
-      const updateGqQPayload: Array<{ id: number; payload: any }> = []
-
+      const gqqPayloads: any[] = []
       for (const q of stagingGqQuestions) {
         if (!q.grand_quiz) continue
         const gqUuid = stagingGqUuidById[q.grand_quiz]
         if (!gqUuid) continue
         const prodGqId = gqUuidToIdMap[gqUuid]
         if (!prodGqId) { console.warn(`[Step 5] SKIP ${q.uuid}: GQ not resolved`); continue }
-
-        const qPayload = {
-          uuid: q.uuid, index: q.index, type: q.type,
+        gqqPayloads.push({
+          uuid: q.uuid,
+          index: q.index,
+          type: q.type,
           question_statement: q.question_statement,
-          options: q.options, answers: q.answers, hints: q.hints,
+          options: q.options,
+          answers: q.answers,
+          hints: q.hints,
           bloom_level: q.bloom_level,
           statement_media_asset: q.statement_media_asset_id ? (assetIdMap[q.statement_media_asset_id] ?? null) : null,
-          is_active: q.is_active ?? true, status: "OnProd",
-          training: null, grand_quiz: prodGqId,
-        }
-
-        const existing = prodGqQByUuid[q.uuid]
-        if (existing) {
-          updateGqQPayload.push({ id: existing.id, payload: qPayload })
-        } else {
-          createGqQPayload.push(qPayload)
-        }
+          is_active: q.is_active ?? true,
+          status: "OnProd",
+          training: null,
+          grand_quiz: prodGqId,
+        })
       }
 
-      if (createGqQPayload.length > 0) {
-        await pc.post("/api/v1/internal/training_question/", createGqQPayload)
-      }
-      for (const { id, payload } of updateGqQPayload) {
-        await pc.patch(`/api/v1/internal/training_question/${id}/`, payload).catch(e =>
-          console.warn(`[Step 5] PATCH failed GQQ ID=${id}:`, e.message)
-        )
+      if (gqqPayloads.length > 0) {
+        console.log(`[Step 5] POSTing ${gqqPayloads.length} grand quiz questions (upsert by uuid)`)
+        const gqqRes = await pc.post("/api/v1/internal/training_question/", gqqPayloads)
+        throwOnConflicts(gqqRes.data, "Grand quiz questions")
+        console.log(`[Step 5] ✓ Done`)
       }
     }
     setStepFn(5, "done")
@@ -600,6 +495,38 @@ export default function ReviewUpload() {
 
   return (
     <div>
+      {/* ── Conflict panel ── */}
+      {syncConflicts.length > 0 && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <h3 className="font-semibold text-red-800 mb-1">
+            Push blocked — {syncConflicts.length} conflict{syncConflicts.length > 1 ? "s" : ""} must be resolved
+          </h3>
+          <p className="text-sm text-red-700 mb-3">
+            Each item below matched multiple prod rows. Deactivate the unwanted prod row in Django admin, then retry.
+          </p>
+          <ul className="space-y-2">
+            {syncConflicts.map(c => (
+              <li key={c.uuid} className="text-sm bg-white rounded border border-red-100 p-3">
+                <p className="font-mono text-xs text-slate-500 mb-1">{c.uuid}</p>
+                <p className="text-red-700 font-medium">{c.reason}</p>
+                <p className="text-xs text-slate-600 mt-1">
+                  Natural key: <code>{JSON.stringify(c.natural_key)}</code>
+                </p>
+                <p className="text-xs text-slate-600">
+                  Conflicting prod IDs: {c.candidate_ids.join(", ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <button
+            className="mt-3 text-sm text-red-600 underline hover:text-red-800"
+            onClick={() => setSyncConflicts([])}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* ── Filters ── */}
       <div className="bg-slate-50 border rounded-lg p-4 mb-4 space-y-3">
         <div className="flex items-center gap-3">
