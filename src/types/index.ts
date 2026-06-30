@@ -135,6 +135,7 @@ export const VENDOR_COURSE_TYPES: Record<string, typeof COURSE_TYPES> = {
   BEACONHOUSE: COURSE_TYPES.filter(t => t.value === "PEDAGOGICAL_PRACTICE"),
   OXBRIDGE: COURSE_TYPES,
   NIETE: COURSE_TYPES.filter(t => t.value === "PEDAGOGICAL_PRACTICE"),
+  I_SAPS: COURSE_TYPES,
 }
 
 export const QUESTION_TYPES = [

@@ -18,6 +18,7 @@ const VENDORS = [
   { value: "BEACONHOUSE", label: "Beaconhouse" },
   { value: "OXBRIDGE", label: "Oxbridge" },
   { value: "NIETE", label: "NIETE" },
+  { value: "I_SAPS", label: "I-SAPS" },
 ]
 
 export default function CourseTable() {
